@@ -277,9 +277,14 @@ Potential features for future versions:
 
 Educational project for M1 Web Technologies course (Master's Degree).
 
-## 👨‍💻 Author
+## 👨‍💻 Authors
 
-Created as part of M1 Web Audio Technology assignment.
+Created by:
+
+- **Mohamed Dhia Ben Salah**
+- **Khalia Mohamed Mehdi**
+
+As part of M1 Web Audio Technology assignment.
 
 ---
 
