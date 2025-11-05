@@ -1,0 +1,349 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+header {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+header h1 {
+  color: #333;
+  font-size: 2.5em;
+  margin-bottom: 10px;
+}
+
+header p {
+  color: #666;
+  font-size: 1.1em;
+}
+
+section {
+  background: white;
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+h2 {
+  color: #333;
+  margin-bottom: 20px;
+  font-size: 1.8em;
+}
+
+h3 {
+  color: #555;
+  margin-bottom: 15px;
+}
+
+/* Control Panel */
+#controlPanel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.preset-selector {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.preset-selector label {
+  font-weight: bold;
+  color: #555;
+}
+
+#presetDropdown {
+  padding: 10px 15px;
+  font-size: 16px;
+  border: 2px solid #667eea;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  min-width: 200px;
+}
+
+#presetDropdown:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button {
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: bold;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+#loadAllBtn {
+  background: #667eea;
+  color: white;
+}
+
+#loadAllBtn:hover:not(:disabled) {
+  background: #5568d3;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
+#loadAllBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Status Display */
+#statusDisplay {
+  flex: 1;
+  text-align: right;
+}
+
+#statusText {
+  display: inline-block;
+  padding: 10px 20px;
+  background: #f0f0f0;
+  border-radius: 20px;
+  color: #555;
+  font-weight: 500;
+}
+
+#statusText.success {
+  background: #d4edda;
+  color: #155724;
+}
+
+#statusText.error {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+#progressContainer {
+  margin-top: 10px;
+  position: relative;
+}
+
+#progressBar {
+  width: 100%;
+  height: 25px;
+  background: #f0f0f0;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+}
+
+#progressBar::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: var(--progress, 0%);
+  background: linear-gradient(90deg, #667eea, #764ba2);
+  transition: width 0.3s ease;
+}
+
+#progressText {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-weight: bold;
+  color: #333;
+  z-index: 1;
+}
+
+/* Pads Grid */
+#padsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 15px;
+}
+
+.pad {
+  aspect-ratio: 1;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.pad:hover:not(:disabled) {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(102, 126, 234, 0.5);
+}
+
+.pad:active:not(:disabled) {
+  transform: translateY(-2px) scale(0.98);
+}
+
+.pad:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  background: #ccc;
+}
+
+.pad.loading {
+  background: #ffc107;
+}
+
+.pad.selected {
+  background: #28a745;
+  box-shadow: 0 0 0 3px white, 0 0 0 6px #28a745;
+}
+
+.pad.error {
+  background: #dc3545;
+}
+
+.pad.playing {
+  background: #ff6b6b;
+  transform: translateY(-3px) scale(0.95);
+  box-shadow: 0 8px 20px rgba(255, 107, 107, 0.6);
+}
+
+.pad-number {
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+.pad-name {
+  font-size: 16px;
+}
+
+.pad-shortcut {
+  font-size: 12px;
+  opacity: 0.7;
+  font-weight: bold;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 2px 8px;
+  border-radius: 4px;
+  letter-spacing: 1px;
+}
+
+.pad-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 4px;
+  background: white;
+  width: var(--progress, 0%);
+  transition: width 0.3s ease;
+}
+
+/* Waveform Section */
+.waveform-wrapper {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 20px;
+}
+
+#waveformCanvas {
+  border: 3px solid #667eea;
+  border-radius: 8px;
+  display: block;
+  background: #f9f9f9;
+}
+
+#overlayCanvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  cursor: crosshair;
+  background: transparent;
+}
+
+.waveform-controls {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.waveform-controls button {
+  background: #667eea;
+  color: white;
+}
+
+.waveform-controls button:hover {
+  background: #5568d3;
+  transform: translateY(-2px);
+}
+
+#resetTrimBtn {
+  background: #6c757d;
+}
+
+#resetTrimBtn:hover {
+  background: #5a6268;
+}
+
+/* Info Section */
+#infoSection ul {
+  list-style-position: inside;
+  color: #555;
+}
+
+#infoSection li {
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+}
+
+#infoSection li:last-child {
+  border-bottom: none;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  #padsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  #controlPanel {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  #statusDisplay {
+    text-align: center;
+  }
+
+  #waveformCanvas,
+  #overlayCanvas {
+    width: 100%;
+    height: auto;
+  }
+}
