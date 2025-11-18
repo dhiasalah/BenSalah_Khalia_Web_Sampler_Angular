@@ -17,10 +17,14 @@ export class SamplerEngine {
   private ctx: AudioContext;
   private pads: Pad[];
   private maxPads: number = 16;
+  private masterGain: GainNode;
+  private recordingDestination: MediaStreamAudioDestinationNode | null = null;
 
   constructor(audioContext: AudioContext) {
     this.ctx = audioContext;
     this.pads = [];
+    this.masterGain = this.ctx.createGain();
+    this.masterGain.connect(this.ctx.destination);
     this.initializePads();
   }
 
@@ -164,7 +168,7 @@ export class SamplerEngine {
     gainNode.gain.value = gain;
 
     source.connect(gainNode);
-    gainNode.connect(this.ctx.destination);
+    gainNode.connect(this.masterGain);
 
     startTime = Math.max(0, Math.min(startTime, buffer.duration));
     endTime = Math.max(startTime, Math.min(endTime, buffer.duration));
@@ -183,6 +187,40 @@ export class SamplerEngine {
 
     pad.trimStart = Math.max(0, startTime);
     pad.trimEnd = Math.min(pad.buffer.duration, endTime);
+  }
+
+  /**
+   * Get audio context
+   */
+  getAudioContext(): AudioContext {
+    return this.ctx;
+  }
+
+  /**
+   * Get master gain node for recording connection
+   */
+  getMasterGain(): GainNode {
+    return this.masterGain;
+  }
+
+  /**
+   * Connect recording destination
+   */
+  connectRecordingDestination(
+    destination: MediaStreamAudioDestinationNode
+  ): void {
+    this.recordingDestination = destination;
+    this.masterGain.connect(destination);
+  }
+
+  /**
+   * Disconnect recording destination
+   */
+  disconnectRecordingDestination(): void {
+    if (this.recordingDestination) {
+      this.masterGain.disconnect(this.recordingDestination);
+      this.recordingDestination = null;
+    }
   }
 
   /**

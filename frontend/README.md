@@ -36,6 +36,7 @@ npm run dev
 - 📊 Waveform visualization and trimming
 - 🎚️ Adjustable trim points with interactive drag handles
 - 🎵 Preview selected samples before playback
+- 🎙️ Audio recording with real-time duration display
 - 📦 Load presets from backend server (running on port 5000)
 - ⌨️ Keyboard support for hands-free playing
 - 📱 Responsive dark theme UI

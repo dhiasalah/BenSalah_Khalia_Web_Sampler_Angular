@@ -48,6 +48,7 @@ Application runs at: `http://localhost:3000`
 - 🎚️ Drag-to-trim interface for precise sample editing
 - 🎵 Real-time audio playback with gain control
 - 📦 Preset management system
+- 🎙️ Audio recording - Capture your performances and download them
 - ⌨️ Full keyboard support
 - 🌙 Professional dark theme UI
 - 📱 Responsive design
@@ -68,7 +69,6 @@ Application runs at: `http://localhost:3000`
 - Node.js & Express.js
 - ES6 Modules
 - Multer (file uploads)
-- Unit tests with GitHub Actions CI/CD
 
 ## Documentation
 

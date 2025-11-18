@@ -1,5 +1,3 @@
-import { distance } from "./utils";
-
 interface TrimBar {
   x: number;
   color: string;
@@ -114,21 +112,13 @@ export class TrimbarsDrawer {
    * Highlight trim bars when mouse is close
    */
   highLightTrimBarsWhenClose(mousePos: { x: number; y: number }): void {
-    const distanceFromLeft = distance(
-      this.leftTrimBar.x,
-      0,
-      mousePos.x,
-      mousePos.y
-    );
-    const distanceFromRight = distance(
-      this.rightTrimBar.x,
-      0,
-      mousePos.x,
-      mousePos.y
-    );
+    // For vertical trim bars, only check horizontal distance (X axis)
+    const distanceFromLeft = Math.abs(this.leftTrimBar.x - mousePos.x);
+    const distanceFromRight = Math.abs(this.rightTrimBar.x - mousePos.x);
 
-    this.leftTrimBar.selected = distanceFromLeft < 60;
-    this.rightTrimBar.selected = distanceFromRight < 60;
+    // Increase detection threshold for easier clicking on vertical bars
+    this.leftTrimBar.selected = distanceFromLeft < 30;
+    this.rightTrimBar.selected = distanceFromRight < 30;
 
     this.leftTrimBar.color = this.leftTrimBar.selected
       ? this.leftTrimBar.selectedColor

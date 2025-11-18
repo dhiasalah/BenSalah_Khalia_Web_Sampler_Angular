@@ -26,6 +26,8 @@ export class WaveformDrawer {
     this.displayHeight = canvas.height;
     this.color = color || "#667eea";
     this.sampleStep = sampleStep;
+    // Clear cached peaks when initializing with new buffer
+    this.peaks = null;
   }
 
   /**
