@@ -1,0 +1,244 @@
+<div class="preset-manager">
+  <header class="manager-header">
+    <h2>📦 Preset Manager</h2>
+    <button class="btn btn-primary" (click)="openCreateModal()">
+      ➕ New Preset
+    </button>
+  </header>
+
+  <!-- Messages -->
+  @if (error()) {
+    <div class="alert alert-error">
+      ❌ {{ error() }}
+      <button class="close-btn" (click)="error.set(null)">×</button>
+    </div>
+  }
+
+  @if (successMessage()) {
+    <div class="alert alert-success">
+      ✅ {{ successMessage() }}
+    </div>
+  }
+
+  <!-- Loading -->
+  @if (loading()) {
+    <div class="loading-bar">
+      <div class="loading-progress"></div>
+    </div>
+  }
+
+  <!-- Presets List -->
+  <div class="presets-list">
+    @if (sortedPresets().length === 0 && !loading()) {
+      <div class="empty-state">
+        <span class="empty-icon">📭</span>
+        <p>No presets found</p>
+        <button class="btn btn-primary" (click)="openCreateModal()">Create your first preset</button>
+      </div>
+    }
+
+    @for (preset of sortedPresets(); track preset.id || preset.slug) {
+      <div class="preset-card" [class.factory]="preset.isFactoryPresets">
+        <div class="preset-info">
+          <h3 class="preset-name">{{ preset.name }}</h3>
+          <div class="preset-meta">
+            <span class="preset-type">{{ preset.type || 'Unknown' }}</span>
+            <span class="preset-samples">{{ getSampleCount(preset) }} samples</span>
+            @if (preset.isFactoryPresets) {
+              <span class="factory-badge">Factory</span>
+            }
+          </div>
+        </div>
+        <div class="preset-actions">
+          <button 
+            class="btn btn-small btn-secondary" 
+            (click)="openRenameModal(preset)"
+            title="Rename preset">
+            ✏️ Rename
+          </button>
+          <button 
+            class="btn btn-small btn-danger" 
+            (click)="openDeleteModal(preset)"
+            title="Delete preset">
+            🗑️ Delete
+          </button>
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- Rename Modal -->
+  @if (showRenameModal()) {
+    <div class="modal-overlay" (click)="closeRenameModal()">
+      <div class="modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>✏️ Rename Preset</h3>
+          <button class="close-btn" (click)="closeRenameModal()">×</button>
+        </div>
+        <div class="modal-body">
+          <label>
+            New name:
+            <input 
+              type="text" 
+              class="input" 
+              [ngModel]="newName()" 
+              (ngModelChange)="newName.set($event)"
+              (keyup.enter)="confirmRename()"
+              autofocus>
+          </label>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" (click)="closeRenameModal()">Cancel</button>
+          <button class="btn btn-primary" (click)="confirmRename()" [disabled]="!newName().trim()">
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Delete Modal -->
+  @if (showDeleteModal()) {
+    <div class="modal-overlay" (click)="closeDeleteModal()">
+      <div class="modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>🗑️ Delete Preset</h3>
+          <button class="close-btn" (click)="closeDeleteModal()">×</button>
+        </div>
+        <div class="modal-body">
+          <p>Are you sure you want to delete <strong>{{ selectedPreset()?.name }}</strong>?</p>
+          <p class="warning">⚠️ This action cannot be undone. All audio files will be deleted.</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" (click)="closeDeleteModal()">Cancel</button>
+          <button class="btn btn-danger" (click)="confirmDelete()">Delete</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Create Modal -->
+  @if (showCreateModal()) {
+    <div class="modal-overlay" (click)="closeCreateModal()">
+      <div class="modal modal-large" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>➕ Create New Preset</h3>
+          <button class="close-btn" (click)="closeCreateModal()">×</button>
+        </div>
+        <div class="modal-body">
+          <!-- Preset Name -->
+          <div class="form-group">
+            <label>Preset Name:</label>
+            <input 
+              type="text" 
+              class="input" 
+              placeholder="My Awesome Preset"
+              [ngModel]="createForm().name" 
+              (ngModelChange)="updateFormName($event)"
+              autofocus>
+          </div>
+
+          <!-- Preset Type -->
+          <div class="form-group">
+            <label>Type/Category:</label>
+            <select 
+              class="input"
+              [ngModel]="createForm().type"
+              (ngModelChange)="updateFormType($event)">
+              @for (type of presetTypes; track type) {
+                <option [value]="type">{{ type }}</option>
+              }
+            </select>
+          </div>
+
+          <!-- Toggle: URL or File Upload -->
+          <div class="form-group">
+            <label class="toggle-label">
+              <input 
+                type="checkbox" 
+                [ngModel]="useFileUpload()"
+                (ngModelChange)="useFileUpload.set($event)">
+              Upload audio files (instead of URLs)
+            </label>
+          </div>
+
+          @if (!useFileUpload()) {
+            <!-- Add Samples by URL -->
+            <div class="form-group">
+              <label>Add Samples (by URL):</label>
+              <div class="sample-input-row">
+                <input 
+                  type="text" 
+                  class="input input-small" 
+                  placeholder="Sample name"
+                  [ngModel]="newSampleName()"
+                  (ngModelChange)="newSampleName.set($event)">
+                <input 
+                  type="text" 
+                  class="input" 
+                  placeholder="https://example.com/sound.wav"
+                  [ngModel]="newSampleUrl()"
+                  (ngModelChange)="newSampleUrl.set($event)"
+                  (keyup.enter)="addSampleUrl()">
+                <button 
+                  class="btn btn-secondary" 
+                  (click)="addSampleUrl()"
+                  [disabled]="!newSampleName() || !newSampleUrl()">
+                  Add
+                </button>
+              </div>
+            </div>
+
+            <!-- List of URL samples -->
+            @if (createForm().samples.length > 0) {
+              <div class="samples-list">
+                <h4>Samples ({{ createForm().samples.length }}):</h4>
+                @for (sample of createForm().samples; track sample.url; let i = $index) {
+                  <div class="sample-item">
+                    <span class="sample-name">{{ sample.name }}</span>
+                    <span class="sample-url">{{ sample.url }}</span>
+                    <button class="btn-remove" (click)="removeSample(i)">×</button>
+                  </div>
+                }
+              </div>
+            }
+          } @else {
+            <!-- File Upload -->
+            <div class="form-group">
+              <label>Upload Audio Files:</label>
+              <input 
+                type="file" 
+                class="input-file"
+                accept="audio/*"
+                multiple
+                (change)="onFilesSelected($event)">
+            </div>
+
+            <!-- List of selected files -->
+            @if (uploadFiles().length > 0) {
+              <div class="samples-list">
+                <h4>Files to upload ({{ uploadFiles().length }}):</h4>
+                @for (file of uploadFiles(); track file.name; let i = $index) {
+                  <div class="sample-item">
+                    <span class="sample-name">🎵 {{ file.name }}</span>
+                    <span class="sample-size">{{ (file.size / 1024).toFixed(1) }} KB</span>
+                    <button class="btn-remove" (click)="removeFile(i)">×</button>
+                  </div>
+                }
+              </div>
+            }
+          }
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" (click)="closeCreateModal()">Cancel</button>
+          <button 
+            class="btn btn-primary" 
+            (click)="confirmCreate()" 
+            [disabled]="!createForm().name.trim() || loading()">
+            {{ loading() ? 'Creating...' : 'Create Preset' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

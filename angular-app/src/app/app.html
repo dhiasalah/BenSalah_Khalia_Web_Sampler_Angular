@@ -1,0 +1,61 @@
+<div class="sampler-app">
+  <header class="app-header">
+    <h1>{{ title() }}</h1>
+    <div class="header-actions">
+      <button class="toggle-btn" (click)="togglePresetManager()">
+        {{ showPresetManager() ? '🎹 Sampler' : '📦 Manage Presets' }}
+      </button>
+      <button class="toggle-test-btn" (click)="toggleHeadlessTest()">
+        {{ showHeadlessTest() ? '📊 Hide' : '🤖 Show' }} Headless Test
+      </button>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <!-- Preset Manager View -->
+    @if (showPresetManager()) {
+      <app-preset-manager />
+    } @else {
+      <!-- Headless Test Section (GUI/Engine Separation Demo) -->
+      @if (showHeadlessTest()) {
+        <section class="headless-section">
+          <app-headless-test />
+        </section>
+        <div class="section-divider"></div>
+      }
+
+      <!-- GUI Section -->
+      <div class="gui-section">
+        <!-- Preset Menu (left side) -->
+        <section class="presets-section">
+          <app-preset-menu (presetSelected)="onPresetSelected($event)" />
+        </section>
+
+        <!-- Sampler Section (center/right) -->
+        <section class="sampler-section">
+          @if (selectedPreset()) {
+            <div class="preset-header">
+              <h2>{{ selectedPreset()?.name }}</h2>
+              <span class="preset-type">{{ selectedPreset()?.type || 'Unknown' }}</span>
+            </div>
+            
+            <!-- Pads Grid -->
+            <app-pads-grid 
+              [preset]="selectedPreset()" 
+              (loadingComplete)="onLoadingComplete()" />
+          } @else {
+            <div class="no-preset-selected">
+              <div class="empty-state">
+                <span class="empty-icon">🎹</span>
+                <h3>No Preset Selected</h3>
+                <p>Select a preset from the menu to load sounds into the sampler pads</p>
+              </div>
+            </div>
+          }
+        </section>
+      </div>
+    }
+  </main>
+</div>
+
+<router-outlet />

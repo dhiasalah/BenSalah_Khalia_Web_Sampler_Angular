@@ -1,0 +1,75 @@
+{
+  "id": "7ca1918a-4103-4142-b911-e376e143042d",
+  "slug": "dhia-11",
+  "name": "dhia 11",
+  "type": "Acoustic",
+  "isFactoryPresets": false,
+  "samples": [
+    {
+      "url": "/presets/dhia 11/kick-808x.wav",
+      "name": "Kick 808X"
+    },
+    {
+      "url": "/presets/dhia 11/snare-808-1.wav",
+      "name": "Snare 808 1"
+    },
+    {
+      "url": "/presets/dhia 11/snare-808x.wav",
+      "name": "Snare 808X"
+    },
+    {
+      "url": "/presets/dhia 11/hitom-808.wav",
+      "name": "HiTom 808"
+    },
+    {
+      "url": "/presets/dhia 11/midtom-808.wav",
+      "name": "MidTom 808"
+    },
+    {
+      "url": "/presets/dhia 11/lowtom-808.wav",
+      "name": "LowTom 808"
+    },
+    {
+      "url": "/presets/dhia 11/closedhh-808.wav",
+      "name": "ClosedHH 808"
+    },
+    {
+      "url": "/presets/dhia 11/openhh-808-1.wav",
+      "name": "OpenHH 808 1"
+    },
+    {
+      "url": "/presets/dhia 11/openhh-808-2.wav",
+      "name": "OpenHH 808 2"
+    },
+    {
+      "url": "/presets/dhia 11/clap-808.wav",
+      "name": "Clap 808"
+    },
+    {
+      "url": "/presets/dhia 11/clap-808x.wav",
+      "name": "Clap 808X"
+    },
+    {
+      "url": "/presets/dhia 11/rimshot-808.wav",
+      "name": "Rimshot 808"
+    },
+    {
+      "url": "/presets/dhia 11/cymbal-808x.wav",
+      "name": "Cymbal 808X"
+    },
+    {
+      "url": "/presets/dhia 11/clave-808.wav",
+      "name": "Clave 808"
+    },
+    {
+      "url": "/presets/dhia 11/maracas-808.wav",
+      "name": "Maracas 808"
+    },
+    {
+      "url": "/presets/dhia 11/cowbell-808.wav",
+      "name": "Cowbell 808"
+    }
+  ],
+  "updatedAt": "2026-01-20T22:00:47.671Z",
+  "createdAt": "2026-01-20T22:00:47.671Z"
+}

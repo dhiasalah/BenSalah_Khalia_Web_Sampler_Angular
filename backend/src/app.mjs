@@ -1,4 +1,4 @@
-// src/app.mjs — corrigé complet
+// src/app.mjs — with MongoDB support
 import express from "express";
 import fs from "fs/promises";
 import path from "path";
@@ -18,6 +18,12 @@ import {
   validatePreset,
 } from "./utils.mjs";
 
+// Import database connection
+import { connectDB, isConnected } from "./db.mjs";
+
+// Import preset service (handles both MongoDB and file storage)
+import * as presetService from "./services/presetService.mjs";
+
 export const app = express();
 app.use(express.json({ limit: "2mb" }));
 
@@ -26,11 +32,11 @@ app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header(
     "Access-Control-Allow-Methods",
-    "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+    "GET, POST, PUT, PATCH, DELETE, OPTIONS",
   );
   res.header(
     "Access-Control-Allow-Headers",
-    "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization",
   );
 
   // Handle preflight requests
@@ -91,6 +97,12 @@ app.use(express.static(PUBLIC_DIR));
 // Ensure data dir exists at startup (best-effort)
 await fs.mkdir(DATA_DIR, { recursive: true }).catch(() => {});
 
+// Initialize MongoDB connection (optional - falls back to file storage)
+const dbConnected = await connectDB();
+console.log(
+  `📦 Storage mode: ${dbConnected ? "MongoDB Atlas" : "Local files"}`,
+);
+
 // ------- Routes -------
 // This is where we define the API endpoints (also called web services or routes)
 // Each route has a method (get, post, put, patch, delete) and a path (e.g., /api/presets)
@@ -98,66 +110,26 @@ await fs.mkdir(DATA_DIR, { recursive: true }).catch(() => {});
 
 // Simple health check endpoint, this is generally the first endpoint to test
 app.get("/api/health", (_req, res) =>
-  res.json({ ok: true, now: new Date().toISOString() })
+  res.json({ ok: true, now: new Date().toISOString() }),
 );
 
 // GET list/search
 app.get("/api/presets", async (req, res, next) => {
   try {
-    // req.query contains optional parameters: q (text search), type (filter by type), factory (true/false)
-    // that appear in the URI like that : /api/presets?q=kick&type=drum&factory=true
-    // the javascript syntax in the following like uses the JavaScript "destructuring" assignment
     const { q, type, factory } = req.query;
-    const files = await listPresetFiles();
-
-    // Promise.all is used to read all JSON files in parallel and in a non-blocking way
-    // This improves performance when dealing with multiple files
-    // The syntax of Promise.all is a bit tricky: we create an array of promises
-    // by mapping each filename to a readJSON call, and then we wait for all of them to complete
-    let items = await Promise.all(
-      files.map((f) => readJSON(path.join(DATA_DIR, f)))
-    );
-
-    // Apply filters
-    if (type) {
-      const t = String(type).toLowerCase();
-      items = items.filter((p) => p?.type?.toLowerCase() === t);
-    }
-    if (factory !== undefined) {
-      const want = String(factory) === "true";
-      items = items.filter((p) => Boolean(p?.isFactoryPresets) === want);
-    }
-    if (q) {
-      const needle = String(q).toLowerCase();
-      items = items.filter((p) => {
-        const inName = p?.name?.toLowerCase().includes(needle);
-        const inSamples =
-          Array.isArray(p?.samples) &&
-          p.samples.some(
-            (s) =>
-              s &&
-              (s.name?.toLowerCase().includes(needle) ||
-                s.url?.toLowerCase().includes(needle))
-          );
-        return inName || inSamples;
-      });
-    }
-
-    // Return the filtered list. the.json method sets the Content-Type header and stringifies the object
+    const items = await presetService.getAllPresets({ q, type, factory });
     res.json(items);
   } catch (e) {
     next(e);
   }
 });
 
-// GET one preset by name or slug. slug means a URL-friendly version of the name
+// GET one preset by name or slug
 app.get("/api/presets/:name", async (req, res, next) => {
   try {
-    const file = safePresetPath(req.params.name);
-    console.log("Fetching preset file:", file);
-    if (!(await fileExists(file)))
-      return res.status(404).json({ error: "Preset not found" });
-    res.json(await readJSON(file));
+    const preset = await presetService.getPresetByName(req.params.name);
+    if (!preset) return res.status(404).json({ error: "Preset not found" });
+    res.json(preset);
   } catch (e) {
     next(e);
   }
@@ -166,7 +138,6 @@ app.get("/api/presets/:name", async (req, res, next) => {
 // POST for creating a new preset
 app.post("/api/presets", async (req, res, next) => {
   try {
-    // explanation of ?? below: if body is null or undefined, use empty object
     const preset = req.body ?? {};
 
     // validate the received preset object
@@ -174,25 +145,16 @@ app.post("/api/presets", async (req, res, next) => {
     if (errs.length) return res.status(400).json({ errors: errs });
 
     // check if a preset with the same name already exists
-    const file = safePresetPath(preset.name);
-    if (await fileExists(file))
+    if (await presetService.presetExists(preset.name))
       return res
         .status(409)
         .json({ error: "A preset with this name already exists" });
 
-    // Add metadata and save the preset in a json file
-    const now = new Date().toISOString();
-    const withMeta = {
-      id: preset.id || crypto.randomUUID(),
-      slug: slugify(preset.name),
-      updatedAt: now,
-      ...preset,
-      name: preset.name,
-    };
-    await writeJSON(file, withMeta);
+    // Create the preset using the service
+    const created = await presetService.createPreset(preset);
 
     // return the created preset
-    res.status(201).json(withMeta);
+    res.status(201).json(created);
   } catch (e) {
     next(e);
   }
@@ -222,7 +184,7 @@ app.post("/api/upload/:folder", upload.array("files", 16), (req, res) => {
 
   const destinationFolder = req.params.folder || "";
   console.log(
-    `Uploaded ${req.files.length} files to folder: ${destinationFolder}`
+    `Uploaded ${req.files.length} files to folder: ${destinationFolder}`,
   );
 
   // Prepare response with file information
@@ -241,27 +203,16 @@ app.post("/api/upload/:folder", upload.array("files", 16), (req, res) => {
 // PUT for replacing or renaming a preset file completely
 app.put("/api/presets/:name", async (req, res, next) => {
   try {
-    const oldFile = safePresetPath(req.params.name);
-    if (!(await fileExists(oldFile)))
+    // Check if preset exists
+    if (!(await presetService.presetExists(req.params.name)))
       return res.status(404).json({ error: "Preset not found" });
 
     const preset = req.body ?? {};
     const errs = validatePreset(preset);
     if (errs.length) return res.status(400).json({ errors: errs });
 
-    const now = new Date().toISOString();
-    const newFile = safePresetPath(preset.name);
-    const current = await readJSON(oldFile).catch(() => ({}));
-    const withMeta = {
-      id: current.id || preset.id || crypto.randomUUID(),
-      slug: slugify(preset.name),
-      updatedAt: now,
-      ...preset,
-      name: preset.name,
-    };
-    await writeJSON(newFile, withMeta);
-    if (newFile != oldFile) await fs.rm(oldFile, { force: true });
-    res.json(withMeta);
+    const updated = await presetService.updatePreset(req.params.name, preset);
+    res.json(updated);
   } catch (e) {
     next(e);
   }
@@ -270,24 +221,14 @@ app.put("/api/presets/:name", async (req, res, next) => {
 // PATCH partial
 app.patch("/api/presets/:name", async (req, res, next) => {
   try {
-    const oldFile = safePresetPath(req.params.name);
-    if (!(await fileExists(oldFile)))
-      return res.status(404).json({ error: "Preset not found" });
-
-    const current = await readJSON(oldFile);
-    const merged = { ...current, ...req.body };
-    merged.name = merged.name ?? current.name;
-    const errs = validatePreset(merged, { partial: true });
+    // Validate partial update
+    const errs = validatePreset(req.body, { partial: true });
     if (errs.length) return res.status(400).json({ errors: errs });
 
-    merged.slug = slugify(merged.name);
-    merged.updatedAt = new Date().toISOString();
+    const updated = await presetService.patchPreset(req.params.name, req.body);
+    if (!updated) return res.status(404).json({ error: "Preset not found" });
 
-    const newFile = safePresetPath(merged.name);
-    await writeJSON(newFile, merged);
-    if (newFile != oldFile) await fs.rm(oldFile, { force: true });
-
-    res.json(merged);
+    res.json(updated);
   } catch (e) {
     next(e);
   }
@@ -296,16 +237,8 @@ app.patch("/api/presets/:name", async (req, res, next) => {
 // DELETE a preset by name
 app.delete("/api/presets/:name", async (req, res, next) => {
   try {
-    const file = safePresetPath(req.params.name);
-    await fs.rm(file, { force: true });
-
-    // We should also delete the corresponding audio files in the folder with the same name
-    // get folder path and delete if exists
-    const folderPath = path.join(DATA_DIR, req.params.name);
-    await fs.rm(folderPath, { recursive: true, force: true }).catch(() => {});
-
+    await presetService.deletePreset(req.params.name);
     // 204 means No Content
-
     res.status(204).send();
   } catch (e) {
     next(e);
@@ -321,27 +254,42 @@ app.post("/api/presets:seed", async (req, res, next) => {
         .status(400)
         .json({ error: "Body must be an array of presets" });
 
-    let created = 0;
-    const slugs = [];
+    // Validate all presets first
     for (const p of arr) {
       const errs = validatePreset(p);
       if (errs.length) return res.status(400).json({ errors: errs });
-      const now = new Date().toISOString();
-      const withMeta = {
-        id: p.id || crypto.randomUUID(),
-        slug: slugify(p.name),
-        updatedAt: now,
-        ...p,
-        name: p.name,
-      };
-      await writeJSON(safePresetPath(p.name), withMeta);
-      created++;
-      slugs.push(withMeta.slug);
     }
-    res.status(201).json({ created, slugs });
+
+    const result = await presetService.seedPresets(arr);
+    res.status(201).json(result);
   } catch (e) {
     next(e);
   }
+});
+
+// POST for migrating presets from file storage to MongoDB
+app.post("/api/presets:migrate", async (req, res, next) => {
+  try {
+    if (!isConnected()) {
+      return res.status(400).json({
+        error: "MongoDB not connected. Cannot migrate.",
+        hint: "Set MONGODB_URI environment variable",
+      });
+    }
+    const result = await presetService.migrateFilesToMongo();
+    res.json(result);
+  } catch (e) {
+    next(e);
+  }
+});
+
+// GET storage status
+app.get("/api/storage/status", (_req, res) => {
+  res.json({
+    mode: isConnected() ? "mongodb" : "files",
+    mongoConnected: isConnected(),
+    dataDir: DATA_DIR,
+  });
 });
 
 // Error handler

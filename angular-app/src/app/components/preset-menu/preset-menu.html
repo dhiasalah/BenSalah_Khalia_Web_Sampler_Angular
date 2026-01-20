@@ -1,0 +1,83 @@
+<div class="preset-menu">
+  <div class="preset-menu-header">
+    <h3>Presets</h3>
+    <div class="preset-menu-actions">
+      <button 
+        class="toggle-btn" 
+        (click)="toggleCategoryView()"
+        [title]="showCategories() ? 'Show flat list' : 'Show categories'">
+        {{ showCategories() ? '📁' : '📋' }}
+      </button>
+      <button class="refresh-btn" (click)="refresh()" title="Refresh presets">
+        🔄
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading state -->
+  @if (isLoading()) {
+    <div class="loading">
+      <span class="spinner"></span>
+      Loading presets...
+    </div>
+  }
+
+  <!-- Error state -->
+  @if (error()) {
+    <div class="error">
+      <p>{{ error() }}</p>
+      <button (click)="refresh()">Retry</button>
+    </div>
+  }
+
+  <!-- Presets content -->
+  @if (!isLoading() && !error()) {
+    @if (!hasPresets()) {
+      <div class="no-presets">
+        <p>No presets available</p>
+      </div>
+    } @else {
+      <!-- Categorized view -->
+      @if (showCategories()) {
+        <div class="categories">
+          @for (category of categories(); track category) {
+            <div class="category">
+              <h4 class="category-title">{{ category }}</h4>
+              <ul class="preset-list">
+                @for (preset of presetsByCategory()[category]; track preset.name) {
+                  <li>
+                    <button 
+                      class="preset-item"
+                      [class.selected]="selectedPreset()?.name === preset.name"
+                      (click)="selectPreset(preset)">
+                      {{ preset.name }}
+                      <span class="sample-count">({{ preset.samples.length }} samples)</span>
+                    </button>
+                  </li>
+                }
+              </ul>
+            </div>
+          }
+        </div>
+      } @else {
+        <!-- Flat list view -->
+        <ul class="preset-list flat">
+          @for (preset of presets(); track preset.name) {
+            <li>
+              <button 
+                class="preset-item"
+                [class.selected]="selectedPreset()?.name === preset.name"
+                (click)="selectPreset(preset)">
+                {{ preset.name }}
+                @if (preset.type) {
+                  <span class="preset-type">[{{ preset.type }}]</span>
+                }
+                <span class="sample-count">({{ preset.samples.length }} samples)</span>
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    }
+  }
+</div>

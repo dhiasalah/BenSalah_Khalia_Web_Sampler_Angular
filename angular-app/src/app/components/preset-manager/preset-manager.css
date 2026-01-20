@@ -1,0 +1,421 @@
+.preset-manager {
+  padding: 1.5rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+/* Header */
+.manager-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #333;
+}
+
+.manager-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #fff;
+}
+
+/* Alerts */
+.alert {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.alert-error {
+  background: #ff4444;
+  color: white;
+}
+
+.alert-success {
+  background: #00c853;
+  color: white;
+}
+
+.close-btn {
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0 0.5rem;
+}
+
+/* Loading */
+.loading-bar {
+  height: 4px;
+  background: #333;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+
+.loading-progress {
+  height: 100%;
+  width: 30%;
+  background: linear-gradient(90deg, #7c4dff, #00bcd4);
+  animation: loading 1s ease-in-out infinite;
+}
+
+@keyframes loading {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400%);
+  }
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 3rem;
+  color: #888;
+}
+
+.empty-icon {
+  font-size: 3rem;
+  display: block;
+  margin-bottom: 1rem;
+}
+
+/* Presets List */
+.presets-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.preset-card {
+  background: #2a2a2a;
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s ease;
+  border: 1px solid #333;
+}
+
+.preset-card:hover {
+  background: #333;
+  border-color: #444;
+}
+
+.preset-card.factory {
+  border-left: 3px solid #7c4dff;
+}
+
+.preset-info {
+  flex: 1;
+}
+
+.preset-name {
+  margin: 0 0 0.25rem;
+  font-size: 1.1rem;
+  color: #fff;
+}
+
+.preset-meta {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.85rem;
+  color: #888;
+}
+
+.preset-type {
+  background: #444;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  color: #aaa;
+}
+
+.factory-badge {
+  background: #7c4dff;
+  color: white;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+
+.preset-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Buttons */
+.btn {
+  padding: 0.6rem 1.2rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #7c4dff, #536dfe);
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #9575ff, #6d83ff);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: #444;
+  color: #fff;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #555;
+}
+
+.btn-danger {
+  background: #ff4444;
+  color: white;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #ff6666;
+}
+
+.btn-small {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.8rem;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal {
+  background: #1e1e1e;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 400px;
+  border: 1px solid #333;
+  animation: slideIn 0.2s ease;
+}
+
+.modal-large {
+  max-width: 600px;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #333;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #fff;
+}
+
+.modal-body {
+  padding: 1.25rem;
+}
+
+.modal-body p {
+  margin: 0 0 1rem;
+  color: #ccc;
+}
+
+.modal-body .warning {
+  color: #ff9800;
+  font-size: 0.9rem;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-top: 1px solid #333;
+}
+
+/* Form */
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #aaa;
+  font-size: 0.9rem;
+}
+
+.input {
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.95rem;
+  box-sizing: border-box;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #7c4dff;
+}
+
+.input-small {
+  width: 150px;
+  flex-shrink: 0;
+}
+
+.input-file {
+  padding: 0.5rem;
+  background: #2a2a2a;
+  border: 2px dashed #444;
+  border-radius: 8px;
+  color: #aaa;
+  cursor: pointer;
+}
+
+.input-file:hover {
+  border-color: #7c4dff;
+}
+
+.toggle-label {
+  display: flex !important;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  color: #ccc !important;
+}
+
+.toggle-label input {
+  width: 18px;
+  height: 18px;
+  accent-color: #7c4dff;
+}
+
+/* Sample input row */
+.sample-input-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.sample-input-row .input {
+  flex: 1;
+}
+
+/* Samples list */
+.samples-list {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #252525;
+  border-radius: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.samples-list h4 {
+  margin: 0 0 0.75rem;
+  color: #888;
+  font-size: 0.85rem;
+}
+
+.sample-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  background: #2a2a2a;
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+}
+
+.sample-item:last-child {
+  margin-bottom: 0;
+}
+
+.sample-name {
+  font-weight: 500;
+  color: #fff;
+  min-width: 100px;
+}
+
+.sample-url,
+.sample-size {
+  flex: 1;
+  color: #666;
+  font-size: 0.85rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.btn-remove {
+  background: #ff4444;
+  color: white;
+  border: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.btn-remove:hover {
+  background: #ff6666;
+}

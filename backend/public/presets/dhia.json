@@ -1,0 +1,94 @@
+{
+  "id": "1f91e50b-e001-4372-9776-a2e1611e63e7",
+  "slug": "dhia",
+  "updatedAt": "2026-01-20T21:23:26.858Z",
+  "name": "dhia",
+  "type": "Drumkit",
+  "isFactoryPresets": false,
+  "samples": [
+    {
+      "url": "/presets/dhia/kick-steveland-1.wav",
+      "name": "Kick Steveland 1"
+    },
+    {
+      "url": "/presets/dhia/snare-steveland-1.wav",
+      "name": "Snare Steveland 1"
+    },
+    {
+      "url": "/presets/dhia/snare-steveland-2.wav",
+      "name": "Snare Steveland 2"
+    },
+    {
+      "url": "/presets/dhia/closedhh-steveland.wav",
+      "name": "ClosedHH Steveland"
+    },
+    {
+      "url": "/presets/dhia/openhh-steveland.wav",
+      "name": "OpenHH Steveland"
+    },
+    {
+      "url": "/presets/dhia/tom-steveland-1.wav",
+      "name": "Tom Steveland 1"
+    },
+    {
+      "url": "/presets/dhia/tom-steveland-2.wav",
+      "name": "Tom Steveland 2"
+    },
+    {
+      "url": "/presets/dhia/tom-steveland-3.wav",
+      "name": "Tom Steveland 3"
+    },
+    {
+      "url": "/presets/dhia/tom-steveland-4.wav",
+      "name": "Tom Steveland 4"
+    },
+    {
+      "url": "/presets/dhia/conga-steveland-1.wav",
+      "name": "Conga Steveland 1"
+    },
+    {
+      "url": "/presets/dhia/bass-steveland-1.wav",
+      "name": "Bass Steveland 1"
+    },
+    {
+      "url": "/presets/dhia/bass-steveland-2.wav",
+      "name": "Bass Steveland 2"
+    },
+    {
+      "url": "/presets/dhia/rhodes-steveland-1.wav",
+      "name": "Rhodes Steveland 1"
+    },
+    {
+      "url": "/presets/dhia/scratch-steveland-1.wav",
+      "name": "Scratch Steveland 1"
+    },
+    {
+      "url": "/presets/dhia/scratch-steveland-2.wav",
+      "name": "Scratch Steveland 2"
+    },
+    {
+      "url": "/presets/dhia/scratch-steveland-3.wav",
+      "name": "Scratch Steveland 3"
+    },
+    {
+      "url": "/presets/dhia/recording-1763503435591.webm",
+      "name": "recording-1763503435591"
+    },
+    {
+      "url": "/presets/dhia/recording-1763503435591.webm",
+      "name": "recording-1763503435591"
+    },
+    {
+      "url": "/presets/dhia/recording-1763539887064.webm",
+      "name": "recording-1763539887064"
+    },
+    {
+      "url": "/presets/dhia/french.mp3",
+      "name": "french"
+    },
+    {
+      "url": "/presets/dhia/recording-1763539887064.webm",
+      "name": "recording-1763539887064"
+    }
+  ]
+}

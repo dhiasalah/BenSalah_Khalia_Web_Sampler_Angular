@@ -1,0 +1,80 @@
+<div class="headless-test">
+  <div class="test-header">
+    <h2>🤖 Headless Mode Test</h2>
+    <p class="test-description">
+      This test demonstrates the audio engine working <strong>independently from the GUI</strong>.
+      The engine loads presets, manages samples, and plays audio completely programmatically.
+    </p>
+  </div>
+
+  <div class="test-controls">
+    <button 
+      class="btn btn-primary"
+      (click)="runHeadlessTest()"
+      [disabled]="isRunning()">
+      {{ isRunning() ? '⏳ Running Test...' : '▶️ Run Full Headless Test' }}
+    </button>
+
+    <button 
+      class="btn btn-secondary"
+      (click)="quickRhythmTest()"
+      [disabled]="isRunning()">
+      🎵 Quick Rhythm Test
+    </button>
+
+    <button 
+      class="btn btn-clear"
+      (click)="clearLogs()"
+      [disabled]="isRunning()">
+      🗑️ Clear Logs
+    </button>
+  </div>
+
+  @if (testProgress() > 0) {
+    <div class="progress-container">
+      <div class="progress-bar">
+        <div 
+          class="progress-fill" 
+          [style.width.%]="testProgress()">
+        </div>
+      </div>
+      <span class="progress-text">{{ testProgress() }}%</span>
+    </div>
+  }
+
+  <div class="test-logs">
+    <div class="logs-header">
+      <h3>📝 Test Logs</h3>
+      <span class="log-count">{{ logs().length }} entries</span>
+    </div>
+    
+    <div class="logs-content">
+      @if (logs().length === 0) {
+        <div class="no-logs">
+          <p>No logs yet. Click "Run Full Headless Test" to start.</p>
+        </div>
+      } @else {
+        <div class="log-entries">
+          @for (log of logs(); track $index) {
+            <div class="log-entry" [class]="'log-' + log.level">
+              <span class="log-time">{{ log.timestamp | date:'HH:mm:ss.SSS' }}</span>
+              <span class="log-level">{{ log.level.toUpperCase() }}</span>
+              <span class="log-message">{{ log.message }}</span>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="test-info">
+    <h3>ℹ️ About Headless Mode</h3>
+    <ul>
+      <li><strong>GUI Independent:</strong> The audio engine operates without any UI controls</li>
+      <li><strong>Automated Testing:</strong> Perfect for unit tests and automation</li>
+      <li><strong>API Driven:</strong> Fetches presets from backend and loads samples programmatically</li>
+      <li><strong>Programmatic Control:</strong> All operations (load, play, trim) via code only</li>
+      <li><strong>Pattern Playback:</strong> Can execute complex sequences without user input</li>
+    </ul>
+  </div>
+</div>

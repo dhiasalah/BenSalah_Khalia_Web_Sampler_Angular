@@ -1,0 +1,383 @@
+<div class="pads-container">
+  <!-- Top Action Buttons -->
+  <div class="top-actions">
+    <!-- Recording Button -->
+    <div class="recording-toggle">
+      <button 
+        class="record-toggle-btn" 
+        [class.active]="showRecordingPanel()"
+        (click)="toggleRecordingPanel()">
+        🎤 Record from Microphone
+      </button>
+    </div>
+
+    <!-- Import Audio Files Button -->
+    <div class="import-toggle">
+      <input 
+        type="file" 
+        #fileInput
+        accept="audio/*"
+        multiple
+        (change)="onFilesSelected($event)"
+        style="display: none">
+      <button 
+        class="import-toggle-btn"
+        (click)="fileInput.click()">
+        📁 Import Audio Files
+      </button>
+    </div>
+  </div>
+
+  <!-- Recording Panel -->
+  @if (showRecordingPanel()) {
+    <div class="recording-panel">
+      <div class="recording-header">
+        <h3>🎙️ Microphone Recording</h3>
+        <button class="close-btn" (click)="toggleRecordingPanel()">✕</button>
+      </div>
+
+      <div class="recording-content">
+        @if (!recordedBuffer()) {
+          <!-- Recording Controls -->
+          <div class="recording-controls">
+            <div class="recording-timer" [class.active]="isRecording()">
+              {{ getFormattedRecordingTime() }}
+            </div>
+            
+            @if (!isRecording()) {
+              <button class="record-btn start" (click)="startRecording()">
+                ⏺ Start Recording
+              </button>
+            } @else {
+              <button class="record-btn stop" (click)="stopRecording()">
+                ⏹ Stop Recording
+              </button>
+            }
+            
+            @if (isRecording()) {
+              <div class="recording-indicator">
+                <span class="pulse-dot"></span>
+                Recording...
+              </div>
+            }
+          </div>
+        } @else {
+          <!-- Recorded Audio Options -->
+          <div class="recorded-options">
+            <div class="recorded-info">
+              <span>✅ Recorded {{ recordingTime().toFixed(1) }}s of audio</span>
+              <button class="preview-btn" (click)="previewRecording()">▶ Preview</button>
+            </div>
+
+            <!-- Auto-split toggle -->
+            <div class="split-options">
+              <label class="toggle-label">
+                <input 
+                  type="checkbox" 
+                  [checked]="autoSplitEnabled()"
+                  (change)="autoSplitEnabled.set(!autoSplitEnabled()); analyzeRecording()">
+                <span>Auto-detect & split sounds</span>
+              </label>
+            </div>
+
+            @if (autoSplitEnabled()) {
+              @if (detectedSegments().length > 0) {
+                <div class="segments-info">
+                  <span>🔊 Detected {{ detectedSegments().length }} sound segment(s)</span>
+                </div>
+              } @else {
+                <div class="segments-info warning">
+                  <span>⚠️ No segments detected.</span>
+                </div>
+              }
+            }
+
+            <!-- Keep Recording Info -->
+            <div class="keep-recording-info">
+              <p>✅ Your recording is ready! It will appear as a dedicated pad on the right side of the grid.</p>
+              @if (autoSplitEnabled() && detectedSegments().length > 1) {
+                <p>🔊 Detected {{ detectedSegments().length }} sound segments</p>
+              }
+            </div>
+
+            <!-- Re-record button -->
+            <button class="rerecord-btn" (click)="recordedBuffer.set(null); recordingTime.set(0)">
+              🔄 Record Again
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Overall loading progress -->
+  @if (isLoadingPreset()) {
+    <div class="overall-progress">
+      <div class="progress-header">
+        <span class="progress-label">Loading preset...</span>
+        <span class="progress-percent">{{ overallProgress() }}%</span>
+      </div>
+      <div class="progress-bar-container">
+        <div class="progress-bar-fill" [style.width.%]="overallProgress()"></div>
+      </div>
+    </div>
+  }
+
+  <!-- Pads Grid -->
+  <div class="pads-grid-container">
+    <div class="pads-grid">
+      @for (position of getGridPositions(); track position) {
+        @let padIndex = getPadIndexForPosition(position);
+        @let pad = getPadForPosition(position);
+        @let loadingState = getLoadingStateForPosition(position);
+        @let keyboardKey = getKeyForPosition(position);
+      
+      <!-- File input for this pad (hidden) -->
+      <input 
+        type="file" 
+        #padFileInput
+        accept="audio/*"
+        (change)="onPadFileSelected($event, padIndex)"
+        style="display: none">
+
+      <div 
+        class="pad"
+        [class.loaded]="pad?.loaded"
+        [class.loading]="loadingState.isLoading"
+        [class.active]="isPadActive(position) || isPositionKeyPressed(position)"
+        [class.error]="loadingState.error"
+        [class.empty]="!pad?.loaded && !loadingState.isLoading"
+        (mousedown)="onPadClick($event, padIndex, pad, padFileInput)"
+        (touchstart)="onPadClick($event, padIndex, pad, padFileInput)">
+        
+        <!-- Pad number -->
+        <span class="pad-number">{{ padIndex + 1 }}</span>
+        
+        <!-- Keyboard key indicator -->
+        @if (keyboardKey) {
+          <span class="pad-key">{{ keyboardKey }}</span>
+        }
+        
+        <!-- Pad content -->
+        <div class="pad-content">
+          @if (loadingState.isLoading) {
+            <!-- Loading animation -->
+            <div class="pad-loading">
+              <div class="loading-bar-container">
+                <div 
+                  class="loading-bar-fill" 
+                  [style.width.%]="loadingState.progress">
+                </div>
+              </div>
+              <span class="loading-percent">{{ loadingState.progress | number:'1.0-0' }}%</span>
+            </div>
+          } @else if (pad?.loaded) {
+            <!-- Loaded pad info -->
+            <span class="pad-name">{{ pad?.name }}</span>
+            <div class="pad-waveform">
+              <!-- Simple waveform visualization -->
+              <div class="waveform-bars">
+                @for (bar of [1,2,3,4,5,6,7,8]; track bar) {
+                  <div class="waveform-bar" [style.height.%]="20 + (bar * 8)"></div>
+                }
+              </div>
+            </div>
+          } @else if (loadingState.error) {
+            <!-- Error state -->
+            <span class="pad-error">⚠️</span>
+          } @else {
+            <!-- Empty pad with import hint -->
+            <div class="pad-empty-content">
+              <span class="pad-empty-icon">📁</span>
+              <span class="pad-empty-text">Click to import</span>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- Recorded Sound Pad (Dedicated) -->
+  @if (recordedBuffer()) {
+    <div class="recorded-pad-container">
+      <div class="recorded-pad-header">
+        <span>🎙️ Recorded Sound</span>
+        <button class="delete-recording-btn" (click)="deleteRecording()">🗑️</button>
+      </div>
+      <div 
+        class="pad recorded-pad"
+        [class.active]="isRecordedPadActive()"
+        (mousedown)="playRecordedSound()"
+        (touchstart)="playRecordedSound()">
+        
+        <span class="pad-name">Rec {{ recordingTime().toFixed(1) }}s</span>
+        <div class="pad-waveform">
+          <div class="waveform-bars">
+            @for (bar of [1,2,3,4,5,6,7,8]; track bar) {
+              <div class="waveform-bar" [style.height.%]="20 + (bar * 8)"></div>
+            }
+          </div>
+        </div>
+      </div>
+      <button class="view-waveform-btn" (click)="displayRecordedWaveform()">
+        📊 View & Trim Waveform
+      </button>
+    </div>
+  }
+  </div>
+
+  <!-- Legend -->
+  <div class="pads-legend">
+    <div class="legend-item">
+      <span class="legend-icon loaded"></span>
+      <span>Loaded</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-icon loading"></span>
+      <span>Loading</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-icon empty"></span>
+      <span>Empty</span>
+    </div>
+    <p class="legend-tip">💡 Click pads or press keyboard keys to play sounds</p>
+  </div>
+
+  <!-- Save Preset Button -->
+  <div class="save-preset-toggle">
+    <button 
+      class="save-toggle-btn" 
+      [class.active]="showSavePanel()"
+      (click)="toggleSavePanel()">
+      💾 Save as New Preset
+    </button>
+    @if (getLoadedSamplesCount() > 0) {
+      <span class="samples-count">{{ getLoadedSamplesCount() }} sample(s) loaded</span>
+    }
+  </div>
+
+  <!-- Save Preset Panel -->
+  @if (showSavePanel()) {
+    <div class="save-panel">
+      <div class="save-header">
+        <h3>💾 Save New Preset</h3>
+        <button class="close-btn" (click)="toggleSavePanel()">✕</button>
+      </div>
+
+      <div class="save-content">
+        <!-- Preset Name Input -->
+        <div class="save-field">
+          <label for="presetName">Preset Name</label>
+          <input 
+            type="text" 
+            id="presetName"
+            placeholder="My Custom Preset"
+            [value]="savePresetName()"
+            (input)="savePresetName.set($any($event.target).value)"
+            [disabled]="isSaving()">
+        </div>
+
+        <!-- Category Select -->
+        <div class="save-field">
+          <label for="presetCategory">Category</label>
+          <select 
+            id="presetCategory"
+            [value]="savePresetCategory()"
+            (change)="savePresetCategory.set($any($event.target).value)"
+            [disabled]="isSaving()">
+            @for (cat of categories; track cat) {
+              <option [value]="cat">{{ cat }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- Samples Info -->
+        <div class="save-info">
+          <span class="info-icon">📦</span>
+          <span>{{ getLoadedSamplesCount() }} sample(s) will be saved</span>
+        </div>
+
+        <!-- Error Message -->
+        @if (saveError()) {
+          <div class="save-error">
+            <span class="error-icon">⚠️</span>
+            <span>{{ saveError() }}</span>
+          </div>
+        }
+
+        <!-- Success Message -->
+        @if (saveSuccess()) {
+          <div class="save-success">
+            <span class="success-icon">✅</span>
+            <span>Preset saved successfully!</span>
+          </div>
+        }
+
+        <!-- Save Button -->
+        <button 
+          class="save-btn"
+          [disabled]="isSaving() || getLoadedSamplesCount() === 0"
+          (click)="savePreset()">
+          @if (isSaving()) {
+            <span class="saving-spinner"></span>
+            Saving...
+          } @else {
+            💾 Save Preset
+          }
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- Waveform Display -->
+  @if (selectedPadIndex() !== null) {
+    <div class="waveform-display">
+      <div class="waveform-header">
+        <span class="waveform-title">🎵 Waveform: {{ selectedPadName() }}</span>
+        @if (selectedPadIndex() === -1) {
+          <span class="waveform-pad-number recorded">🎙️ Recorded</span>
+        } @else {
+          <span class="waveform-pad-number">Pad {{ selectedPadIndex()! + 1 }}</span>
+        }
+      </div>
+      <div class="waveform-canvas-container">
+        <canvas 
+          #waveformCanvas 
+          class="waveform-canvas"
+          (mousedown)="onCanvasMouseDown($event)"
+          (mousemove)="onCanvasMouseMove($event)"
+          (mouseup)="onCanvasMouseUp()"
+          (mouseleave)="onCanvasMouseLeave()">
+        </canvas>
+      </div>
+      
+      <!-- Trim Controls -->
+      <div class="trim-controls">
+        <div class="trim-info">
+          <div class="trim-value">
+            <span class="trim-label">Start:</span>
+            <span class="trim-time start">{{ getFormattedTime(trimStart()) }}</span>
+          </div>
+          <div class="trim-value">
+            <span class="trim-label">End:</span>
+            <span class="trim-time end">{{ getFormattedTime(trimEnd()) }}</span>
+          </div>
+          <div class="trim-value">
+            <span class="trim-label">Duration:</span>
+            <span class="trim-time">{{ getFormattedTime(trimEnd() - trimStart()) }}</span>
+          </div>
+        </div>
+        <div class="trim-actions">
+          <button class="trim-btn preview" (click)="previewTrimmedSound()">
+            ▶ Preview
+          </button>
+          <button class="trim-btn reset" (click)="resetTrim()">
+            ↺ Reset
+          </button>
+        </div>
+      </div>
+      
+      <p class="trim-tip">💡 Drag the orange (start) and red (end) bars to trim the sample</p>
+    </div>
+  }
+</div>
