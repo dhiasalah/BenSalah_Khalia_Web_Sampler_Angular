@@ -4,11 +4,13 @@ A professional web-based audio sampler and beat maker application built with mod
 
 **Live Demo**: Select presets, load audio samples, trim them with interactive waveform editor, and trigger playback using 16 pads or keyboard shortcuts.
 
+**Production Backend**: https://web-sampler-angular-mdb.onrender.com
+
 ## Project Structure
 
 ```
 Web-Audio-Sampler/
-├── frontend/              # Next.js React application
+├── angular-app/           # Angular 19 frontend application
 │   ├── src/
 │   ├── package.json
 │   └── README.md
@@ -16,7 +18,11 @@ Web-Audio-Sampler/
 │   ├── src/
 │   ├── package.json
 │   └── README.md
-└── Assignment_Solution/   # Original vanilla JS reference
+├── frontend/              # Next.js React application (alternative)
+│   ├── src/
+│   ├── package.json
+│   └── README.md
+└── AI-DOCUMENTATION.md    # Documentation IA
 ```
 
 ## Quick Start
@@ -31,15 +37,15 @@ npm start
 
 Server runs at: `http://localhost:5000`
 
-### 2. Frontend Application (Port 3000)
+### 2. Angular Frontend (Port 4200)
 
 ```bash
-cd frontend
+cd angular-app
 npm install
-npm run dev
+npm start
 ```
 
-Application runs at: `http://localhost:3000`
+Application runs at: `http://localhost:4200`
 
 ## Features
 
@@ -47,18 +53,20 @@ Application runs at: `http://localhost:3000`
 - 📊 Interactive waveform editor with visual trim markers
 - 🎚️ Drag-to-trim interface for precise sample editing
 - 🎵 Real-time audio playback with gain control
-- 📦 Preset management system
-- 🎙️ Audio recording - Capture your performances and download them
+- 📦 Preset management system (CRUD complet)
+- 🎙️ Microphone recording with silence detection
 - ⌨️ Full keyboard support
 - 📱 Responsive design
+- ☁️ MongoDB Cloud storage
+- 🚀 Backend deployed on Render.com
 
 ## Technologies
 
-### Frontend
+### Frontend (Angular)
 
-- Next.js 16 & React 19
+- Angular 19
 - TypeScript
-- Axios HTTP client
+- RxJS
 - Web Audio API
 - Canvas API
 - CSS3 Animations
@@ -66,13 +74,15 @@ Application runs at: `http://localhost:3000`
 ### Backend
 
 - Node.js & Express.js
+- MongoDB & Mongoose
 - ES6 Modules
 - Multer (file uploads)
 
 ## Documentation
 
-- [Frontend README](./frontend/README.md) - Setup, features, and development guide
-- [Backend README](./ExampleRESTEndpointCorrige/README.md) - API endpoints and server setup
+- [Frontend README (Angular)](./angular-app/README.md) - Setup, features, and development guide
+- [Backend README](./backend/README.md) - API endpoints and server setup
+- [AI Documentation](./AI-DOCUMENTATION.md) - Utilisation de l'IA dans le projet
 
 ## License
 
