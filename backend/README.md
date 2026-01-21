@@ -1,49 +1,73 @@
-# Web Audio Sampler - Backend Server
+# Web Audio Sampler – Backend
 
-REST API server for the Web Audio Sampler application. Provides endpoints for managing audio presets and samples.
+Backend REST API for the Web Audio Sampler project.
 
-## Prerequisites
+## Features
 
-- Node.js 16+
-- npm or yarn
+- Serves audio presets and samples
+- Provides REST endpoints for preset management
+- Supports file uploads for new samples
+- Automated tests and CI workflow
 
-## Setup & Installation
+## Core Logic
 
-```bash
-# Install dependencies
-npm install
-```
-
-## Running the Server
-
-```bash
-# Start the server (runs on port 5000)
-npm start
-```
-
-The server will be available at `http://localhost:5000`
-
-## API Endpoints
-
-- `GET /api/presets` - Get all available presets
-- `GET /api/presets/:name` - Get a specific preset
-- `GET /presets/*` - Serve preset files
-- `GET /sounds/*` - Serve sound files
-
-## Testing
-
-```bash
-# Run unit tests
-npm run tests
-```
+- Built with Express.js and ES6 modules
+- Handles preset and sample file storage
+- Communicates with the Angular frontend
 
 ## Technologies
 
 - Node.js
 - Express.js
-- Multer (file uploads)
-- ES6 Modules
+- MongoDB
 
-## GitHub Actions
+## Setup & Running
 
-CI/CD workflow configured in `.github/workflows/ci.yml` for automated testing on push and pull requests.
+### Installation
+
+```bash
+cd backend
+npm install
+```
+
+### Running the Backend
+
+#### For Local Development
+
+1. Start the backend server:
+
+```bash
+npm start
+```
+
+The server will run on `http://localhost:5000`
+
+2. Update the Angular frontend to use localhost:
+   - Edit `angular-app/src/app/config/environment.ts`
+   - Set `BACKEND_URL: 'http://localhost:5000'`
+
+#### For Production
+
+The backend is already deployed at: **https://web-sampler-angular-mdb.onrender.com**
+
+To use the production backend:
+
+- Edit `angular-app/src/app/config/environment.ts`
+- Set `BACKEND_URL: 'https://web-sampler-angular-mdb.onrender.com'`
+
+No additional deployment needed - the production backend is live and ready to use.
+
+### Environment Variables
+
+The backend may require the following environment variables:
+
+- `MONGODB_URI` - MongoDB connection string
+- `PORT` - Port number (default: 5000)
+
+### Testing
+
+Run the test suite:
+
+```bash
+npm test
+```
