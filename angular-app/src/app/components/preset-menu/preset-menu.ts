@@ -1,6 +1,7 @@
 import { Component, inject, signal, computed, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { PresetService, Preset, PresetsByCategory } from '../../services/preset';
+import { PresetService } from '../../services/preset';
+import type { Preset, PresetsByCategory } from '../../models';
 
 @Component({
   selector: 'app-preset-menu',
@@ -11,13 +12,13 @@ import { PresetService, Preset, PresetsByCategory } from '../../services/preset'
 export class PresetMenu {
   private readonly presetService = inject(PresetService);
 
-  // Signals for reactive state management
-  presets = signal<Preset[]>([]);
-  presetsByCategory = signal<PresetsByCategory>({});
-  selectedPreset = signal<Preset | null>(null);
-  isLoading = signal(true);
-  error = signal<string | null>(null);
-  showCategories = signal(true); // Toggle between flat list and categorized view
+  // State signals
+  readonly presets = signal<Preset[]>([]);
+  readonly presetsByCategory = signal<PresetsByCategory>({});
+  readonly selectedPreset = signal<Preset | null>(null);
+  readonly isLoading = signal(true);
+  readonly error = signal<string | null>(null);
+  readonly showCategories = signal(true);
 
   // Computed values
   categories = computed(() => Object.keys(this.presetsByCategory()));

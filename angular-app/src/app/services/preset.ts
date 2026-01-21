@@ -1,51 +1,25 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, map, switchMap, forkJoin, of } from 'rxjs';
+import { Observable, map, switchMap } from 'rxjs';
+import type { Preset, Sample, PresetsByCategory, UploadResponse, SampleToSave } from '../models';
+import { environment } from '../config/environment';
 
-// Interface for a sample in a preset
-export interface Sample {
-  url: string;
-  name: string;
-}
+// Re-export types for backward compatibility
+export type { Preset, Sample, PresetsByCategory, UploadResponse, SampleToSave } from '../models';
 
-// Interface for a preset
-export interface Preset {
-  id?: string;
-  name: string;
-  slug?: string;
-  type?: string; // Category: Drumkit, Piano, etc.
-  isFactoryPresets?: boolean;
-  samples: Sample[];
-}
-
-// Interface for presets grouped by category
-export interface PresetsByCategory {
-  [category: string]: Preset[];
-}
-
-// Interface for file upload response
-export interface UploadResponse {
-  uploaded: number;
-  files: {
-    originalName: string;
-    storedName: string;
-    size: number;
-    url: string;
-  }[];
-}
-
-// Interface for sample to save (with audio data)
-export interface SampleToSave {
-  name: string;
-  audioBuffer: AudioBuffer;
-}
+/**
+ * API configuration
+ */
+const API_CONFIG = {
+  BASE_URL: `${environment.BACKEND_URL}/api`,
+} as const;
 
 @Injectable({
   providedIn: 'root',
 })
 export class PresetService {
   private readonly http = inject(HttpClient);
-  private readonly apiUrl = 'http://localhost:5000/api';
+  private readonly apiUrl = API_CONFIG.BASE_URL;
 
   /**
    * Fetch all presets from the backend

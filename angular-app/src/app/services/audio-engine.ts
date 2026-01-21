@@ -1,17 +1,34 @@
 import { Injectable } from '@angular/core';
+import type { Pad, SoundSegment } from '../models';
+
+// Re-export Pad for backward compatibility
+export type { Pad } from '../models';
 
 /**
- * Interface for a sampler pad
+ * Audio Engine configuration constants
  */
-export interface Pad {
-  index: number;
-  buffer: AudioBuffer | null;
-  name: string;
-  loaded: boolean;
-  trimStart: number;
-  trimEnd: number;
-  gain: number;
-}
+const AUDIO_CONFIG = {
+  MAX_PADS: 16,
+  DEFAULT_GAIN: 1.0,
+  MAX_GAIN: 2.0,
+  MIN_GAIN: 0,
+  RECORDING_MIME_TYPE: 'audio/webm;codecs=opus',
+  RECORDING_INTERVAL_MS: 100,
+} as const;
+
+/**
+ * Default silence detection configuration
+ */
+const SILENCE_DETECTION_DEFAULTS = {
+  THRESHOLD: 0.02,
+  MIN_SILENCE_DURATION: 0.1,
+  MIN_SOUND_DURATION: 0.05,
+} as const;
+
+/**
+ * Progress callback type
+ */
+type ProgressCallback = (progress: number) => void;
 
 /**
  * AudioEngine - Core audio processing engine (headless)
@@ -24,49 +41,24 @@ export interface Pad {
 export class AudioEngine {
   private ctx: AudioContext | null = null;
   private pads: Pad[] = [];
-  private maxPads: number = 16;
   private masterGain: GainNode | null = null;
-  private recordingDestination: MediaStreamAudioDestinationNode | null = null;
 
   // Recording state
   private mediaRecorder: MediaRecorder | null = null;
   private recordedChunks: Blob[] = [];
   private mediaStream: MediaStream | null = null;
 
-  constructor() {
-    // Don't initialize audio context in constructor
-    // Let it be initialized when needed (user interaction)
-  }
-
   /**
    * Initialize the audio engine
    * Must be called after user interaction
    */
   async initialize(): Promise<void> {
-    if (this.ctx) return; // Already initialized
+    if (this.ctx) return;
 
     this.ctx = new AudioContext();
     this.masterGain = this.ctx.createGain();
     this.masterGain.connect(this.ctx.destination);
     this.initializePads();
-  }
-
-  /**
-   * Initialize empty pads
-   */
-  private initializePads(): void {
-    this.pads = [];
-    for (let i = 0; i < this.maxPads; i++) {
-      this.pads.push({
-        index: i,
-        buffer: null,
-        name: `Pad ${i + 1}`,
-        loaded: false,
-        trimStart: 0,
-        trimEnd: 1,
-        gain: 1.0,
-      });
-    }
   }
 
   /**
@@ -77,21 +69,124 @@ export class AudioEngine {
   }
 
   /**
+   * Get audio context (for advanced usage)
+   */
+  getAudioContext(): AudioContext | null {
+    return this.ctx;
+  }
+
+  /**
+   * Resume audio context if suspended
+   */
+  async resume(): Promise<void> {
+    if (this.ctx?.state === 'suspended') {
+      await this.ctx.resume();
+    }
+  }
+
+  // ==================== PAD MANAGEMENT ====================
+
+  /**
+   * Initialize empty pads
+   */
+  private initializePads(): void {
+    this.pads = Array.from({ length: AUDIO_CONFIG.MAX_PADS }, (_, i) => this.createEmptyPad(i));
+  }
+
+  /**
+   * Create an empty pad object
+   */
+  private createEmptyPad(index: number): Pad {
+    return {
+      index,
+      buffer: null,
+      name: `Pad ${index + 1}`,
+      loaded: false,
+      trimStart: 0,
+      trimEnd: 1,
+      gain: AUDIO_CONFIG.DEFAULT_GAIN,
+    };
+  }
+
+  /**
+   * Validate pad index
+   */
+  private isValidPadIndex(padIndex: number): boolean {
+    return padIndex >= 0 && padIndex < AUDIO_CONFIG.MAX_PADS;
+  }
+
+  /**
+   * Ensure engine is initialized, throw if not
+   */
+  private ensureInitialized(): void {
+    if (!this.ctx) {
+      throw new Error('AudioEngine not initialized');
+    }
+  }
+
+  /**
+   * Get pad data
+   */
+  getPad(padIndex: number): Pad | null {
+    if (!this.isValidPadIndex(padIndex)) return null;
+    return this.pads[padIndex];
+  }
+
+  /**
+   * Get all pads
+   */
+  getAllPads(): Pad[] {
+    return [...this.pads];
+  }
+
+  /**
+   * Reset a pad to default trim and gain
+   */
+  resetPad(padIndex: number): void {
+    if (!this.isValidPadIndex(padIndex)) return;
+
+    const pad = this.pads[padIndex];
+    if (pad.loaded && pad.buffer) {
+      pad.trimStart = 0;
+      pad.trimEnd = pad.buffer.duration;
+      pad.gain = AUDIO_CONFIG.DEFAULT_GAIN;
+    }
+  }
+
+  /**
+   * Clear a specific pad
+   */
+  clearPad(padIndex: number): void {
+    if (!this.isValidPadIndex(padIndex)) return;
+    this.pads[padIndex] = this.createEmptyPad(padIndex);
+  }
+
+  /**
+   * Clear all pads
+   */
+  clearAll(): void {
+    this.pads.forEach((_, index) => this.clearPad(index));
+  }
+
+  // ==================== LOADING ====================
+
+  /**
    * Load a sound into a specific pad
    */
   async loadSound(
     padIndex: number,
     audioData: ArrayBuffer,
     name: string | null = null,
-    progressCallback: ((progress: number) => void) | null = null,
+    progressCallback: ProgressCallback | null = null,
   ): Promise<Pad> {
-    if (!this.ctx) throw new Error('AudioEngine not initialized');
-    if (padIndex < 0 || padIndex >= this.maxPads) {
+    this.ensureInitialized();
+
+    if (!this.isValidPadIndex(padIndex)) {
       throw new Error(`Invalid pad index: ${padIndex}`);
     }
 
     try {
-      const buffer = await this.ctx.decodeAudioData(audioData);
+      const buffer = await this.ctx!.decodeAudioData(audioData);
 
       const pad = this.pads[padIndex];
       pad.buffer = buffer;
@@ -99,11 +194,9 @@ export class AudioEngine {
       pad.loaded = true;
       pad.trimStart = 0;
       pad.trimEnd = buffer.duration;
-      pad.gain = 1.0;
+      pad.gain = AUDIO_CONFIG.DEFAULT_GAIN;
 
-      if (progressCallback) {
-        progressCallback(100);
-      }
+      progressCallback?.(100);
 
       return pad;
     } catch (error) {
@@ -118,9 +211,9 @@ export class AudioEngine {
   async loadSoundFromURL(
     padIndex: number,
     url: string,
-    progressCallback: ((progress: number) => void) | null = null,
+    progressCallback: ProgressCallback | null = null,
   ): Promise<Pad> {
-    if (!this.ctx) throw new Error('AudioEngine not initialized');
+    this.ensureInitialized();
 
     const response = await fetch(url);
 
@@ -130,40 +223,80 @@ export class AudioEngine {
       );
     }
 
+    const arrayBuffer = await this.fetchWithProgress(response, progressCallback);
+    const fileName = this.extractFileNameFromUrl(url);
+
+    return await this.loadSound(padIndex, arrayBuffer, fileName, progressCallback);
+  }
+
+  /**
+   * Load an AudioBuffer directly into a pad
+   */
+  loadBuffer(padIndex: number, buffer: AudioBuffer, name: string): Pad {
+    if (!this.isValidPadIndex(padIndex)) {
+      throw new Error(`Invalid pad index: ${padIndex}`);
+    }
+
+    const pad = this.pads[padIndex];
+    pad.buffer = buffer;
+    pad.name = name;
+    pad.loaded = true;
+    pad.trimStart = 0;
+    pad.trimEnd = buffer.duration;
+    pad.gain = AUDIO_CONFIG.DEFAULT_GAIN;
+
+    return pad;
+  }
+
+  /**
+   * Fetch response body with progress tracking
+   */
+  private async fetchWithProgress(
+    response: Response,
+    progressCallback: ProgressCallback | null,
+  ): Promise<ArrayBuffer> {
     const contentLength = response.headers.get('content-length');
-    let receivedLength = 0;
     const reader = response.body!.getReader();
     const chunks: Uint8Array[] = [];
+    let receivedLength = 0;
 
     while (true) {
       const { done, value } = await reader.read();
-
       if (done) break;
 
       chunks.push(value);
       receivedLength += value.length;
 
       if (progressCallback && contentLength) {
-        const progress = (receivedLength / parseInt(contentLength)) * 100;
+        const progress = (receivedLength / parseInt(contentLength, 10)) * 100;
         progressCallback(progress);
       }
     }
 
-    const chunksAll = new Uint8Array(receivedLength);
+    // Combine chunks into single ArrayBuffer
+    const combined = new Uint8Array(receivedLength);
     let position = 0;
     for (const chunk of chunks) {
-      chunksAll.set(chunk, position);
+      combined.set(chunk, position);
       position += chunk.length;
     }
 
-    const fileName =
+    return combined.buffer;
+  }
+
+  /**
+   * Extract filename from URL
+   */
+  private extractFileNameFromUrl(url: string): string {
+    return (
       url
         .split('/')
         .pop()
-        ?.replace(/\.[^/.]+$/, '') || 'sound';
-
-    return await this.loadSound(padIndex, chunksAll.buffer, fileName, progressCallback);
+        ?.replace(/\.[^/.]+$/, '') || 'sound'
+    );
   }
+
+  // ==================== PLAYBACK ====================
 
   /**
    * Play a pad
@@ -174,7 +307,7 @@ export class AudioEngine {
       return;
     }
 
-    if (padIndex < 0 || padIndex >= this.maxPads) {
+    if (!this.isValidPadIndex(padIndex)) {
       console.warn(`Invalid pad index: ${padIndex}`);
       return;
     }
@@ -186,17 +319,17 @@ export class AudioEngine {
       return;
     }
 
-    this._playBuffer(pad.buffer, pad.trimStart, pad.trimEnd, pad.gain);
+    this.playBuffer(pad.buffer, pad.trimStart, pad.trimEnd, pad.gain);
   }
 
   /**
-   * Internal method to play a buffer
+   * Play an audio buffer with optional trim and gain
    */
-  private _playBuffer(
+  private playBuffer(
     buffer: AudioBuffer,
     startTime: number,
     endTime: number,
-    gain: number = 1.0,
+    gain: number = AUDIO_CONFIG.DEFAULT_GAIN,
   ): void {
     if (!this.ctx || !this.masterGain) return;
 
@@ -209,17 +342,20 @@ export class AudioEngine {
     source.connect(gainNode);
     gainNode.connect(this.masterGain);
 
-    startTime = Math.max(0, Math.min(startTime, buffer.duration));
-    endTime = Math.max(startTime, Math.min(endTime, buffer.duration));
+    // Clamp times to valid range
+    const clampedStart = Math.max(0, Math.min(startTime, buffer.duration));
+    const clampedEnd = Math.max(clampedStart, Math.min(endTime, buffer.duration));
 
-    source.start(0, startTime, endTime - startTime);
+    source.start(0, clampedStart, clampedEnd - clampedStart);
   }
+
+  // ==================== TRIM & GAIN ====================
 
   /**
    * Set trim points for a pad
    */
   setTrimPoints(padIndex: number, startTime: number, endTime: number): void {
-    if (padIndex < 0 || padIndex >= this.maxPads) return;
+    if (!this.isValidPadIndex(padIndex)) return;
 
     const pad = this.pads[padIndex];
     if (!pad.loaded || !pad.buffer) return;
@@ -232,76 +368,9 @@ export class AudioEngine {
    * Set gain for a pad
    */
   setGain(padIndex: number, gain: number): void {
-    if (padIndex < 0 || padIndex >= this.maxPads) return;
+    if (!this.isValidPadIndex(padIndex)) return;
     const pad = this.pads[padIndex];
-    pad.gain = Math.max(0, Math.min(2.0, gain));
-  }
-
-  /**
-   * Get pad data
-   */
-  getPad(padIndex: number): Pad | null {
-    if (padIndex < 0 || padIndex >= this.maxPads) return null;
-    return this.pads[padIndex];
-  }
-
-  /**
-   * Get all pads
-   */
-  getAllPads(): Pad[] {
-    return this.pads;
-  }
-
-  /**
-   * Reset a pad
-   */
-  resetPad(padIndex: number): void {
-    if (padIndex < 0 || padIndex >= this.maxPads) return;
-
-    const pad = this.pads[padIndex];
-    if (pad.loaded && pad.buffer) {
-      pad.trimStart = 0;
-      pad.trimEnd = pad.buffer.duration;
-      pad.gain = 1.0;
-    }
-  }
-
-  /**
-   * Clear a specific pad
-   */
-  clearPad(padIndex: number): void {
-    if (padIndex < 0 || padIndex >= this.maxPads) return;
-
-    const pad = this.pads[padIndex];
-    pad.buffer = null;
-    pad.loaded = false;
-    pad.trimStart = 0;
-    pad.trimEnd = 1;
-    pad.gain = 1.0;
-    pad.name = `Pad ${padIndex + 1}`;
-  }
-
-  /**
-   * Clear all pads
-   */
-  clearAll(): void {
-    this.pads.forEach((_, index) => this.clearPad(index));
-  }
-
-  /**
-   * Get audio context (for advanced usage)
-   */
-  getAudioContext(): AudioContext | null {
-    return this.ctx;
-  }
-
-  /**
-   * Resume audio context if suspended
-   */
-  async resume(): Promise<void> {
-    if (this.ctx && this.ctx.state === 'suspended') {
-      await this.ctx.resume();
-    }
+    pad.gain = Math.max(AUDIO_CONFIG.MIN_GAIN, Math.min(AUDIO_CONFIG.MAX_GAIN, gain));
   }
 
   // ==================== MICROPHONE RECORDING ====================
@@ -310,14 +379,14 @@ export class AudioEngine {
    * Start recording from microphone
    */
   async startRecording(): Promise<void> {
-    if (!this.ctx) throw new Error('AudioEngine not initialized');
+    this.ensureInitialized();
 
     try {
       this.mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
       this.recordedChunks = [];
 
       this.mediaRecorder = new MediaRecorder(this.mediaStream, {
-        mimeType: 'audio/webm;codecs=opus',
+        mimeType: AUDIO_CONFIG.RECORDING_MIME_TYPE,
       });
 
       this.mediaRecorder.ondataavailable = (event) => {
@@ -326,7 +395,7 @@ export class AudioEngine {
         }
       };
 
-      this.mediaRecorder.start(100); // Collect data every 100ms
+      this.mediaRecorder.start(AUDIO_CONFIG.RECORDING_INTERVAL_MS);
     } catch (error) {
       console.error('Error accessing microphone:', error);
       throw error;
@@ -337,7 +406,7 @@ export class AudioEngine {
    * Stop recording and return the audio buffer
    */
   async stopRecording(): Promise<AudioBuffer> {
-    if (!this.ctx) throw new Error('AudioEngine not initialized');
+    this.ensureInitialized();
     if (!this.mediaRecorder) throw new Error('No recording in progress');
 
     return new Promise((resolve, reject) => {
@@ -355,10 +424,7 @@ export class AudioEngine {
           // Decode to AudioBuffer
           const audioBuffer = await this.ctx!.decodeAudioData(arrayBuffer);
 
-          this.mediaRecorder = null;
-          this.mediaStream = null;
-          this.recordedChunks = [];
-
+          this.cleanupRecording();
           resolve(audioBuffer);
         } catch (error) {
           reject(error);
@@ -373,10 +439,17 @@ export class AudioEngine {
    * Cancel ongoing recording
    */
   cancelRecording(): void {
-    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
-      this.mediaRecorder.stop();
+    if (this.mediaRecorder?.state !== 'inactive') {
+      this.mediaRecorder?.stop();
     }
     this.mediaStream?.getTracks().forEach((track) => track.stop());
+    this.cleanupRecording();
+  }
+
+  /**
+   * Clean up recording resources
+   */
+  private cleanupRecording(): void {
     this.mediaRecorder = null;
     this.mediaStream = null;
     this.recordedChunks = [];
@@ -386,27 +459,10 @@ export class AudioEngine {
    * Check if currently recording
    */
   isRecording(): boolean {
-    return this.mediaRecorder !== null && this.mediaRecorder.state === 'recording';
+    return this.mediaRecorder?.state === 'recording';
   }
 
-  /**
-   * Load an AudioBuffer directly into a pad
-   */
-  loadBuffer(padIndex: number, buffer: AudioBuffer, name: string): Pad {
-    if (padIndex < 0 || padIndex >= this.maxPads) {
-      throw new Error(`Invalid pad index: ${padIndex}`);
-    }
-
-    const pad = this.pads[padIndex];
-    pad.buffer = buffer;
-    pad.name = name;
-    pad.loaded = true;
-    pad.trimStart = 0;
-    pad.trimEnd = buffer.duration;
-    pad.gain = 1.0;
-
-    return pad;
-  }
+  // ==================== AUDIO ANALYSIS ====================
 
   /**
    * Detect silence segments in an audio buffer
@@ -414,46 +470,39 @@ export class AudioEngine {
    */
   detectSoundSegments(
     buffer: AudioBuffer,
-    silenceThreshold: number = 0.02,
-    minSilenceDuration: number = 0.1,
-    minSoundDuration: number = 0.05,
-  ): Array<{ start: number; end: number }> {
+    silenceThreshold: number = SILENCE_DETECTION_DEFAULTS.THRESHOLD,
+    minSilenceDuration: number = SILENCE_DETECTION_DEFAULTS.MIN_SILENCE_DURATION,
+    minSoundDuration: number = SILENCE_DETECTION_DEFAULTS.MIN_SOUND_DURATION,
+  ): SoundSegment[] {
     const data = buffer.getChannelData(0);
     const sampleRate = buffer.sampleRate;
-    const segments: Array<{ start: number; end: number }> = [];
+    const segments: SoundSegment[] = [];
+
+    const minSilenceSamples = minSilenceDuration * sampleRate;
+    const minSoundSamples = minSoundDuration * sampleRate;
 
     let isInSound = false;
     let soundStart = 0;
     let silenceStart = 0;
-
-    const minSilenceSamples = minSilenceDuration * sampleRate;
-    const minSoundSamples = minSoundDuration * sampleRate;
 
     for (let i = 0; i < data.length; i++) {
       const amplitude = Math.abs(data[i]);
 
       if (amplitude > silenceThreshold) {
         if (!isInSound) {
-          // Start of sound
           isInSound = true;
           soundStart = i;
         }
         silenceStart = i;
-      } else {
-        if (isInSound) {
-          // Check if silence is long enough
-          if (i - silenceStart >= minSilenceSamples) {
-            // End of sound segment
-            const segmentLength = silenceStart - soundStart;
-            if (segmentLength >= minSoundSamples) {
-              segments.push({
-                start: soundStart / sampleRate,
-                end: silenceStart / sampleRate,
-              });
-            }
-            isInSound = false;
-          }
+      } else if (isInSound && i - silenceStart >= minSilenceSamples) {
+        const segmentLength = silenceStart - soundStart;
+        if (segmentLength >= minSoundSamples) {
+          segments.push({
+            start: soundStart / sampleRate,
+            end: silenceStart / sampleRate,
+          });
         }
+        isInSound = false;
       }
     }
 
@@ -474,32 +523,35 @@ export class AudioEngine {
   /**
    * Split an audio buffer into segments
    */
-  splitBuffer(buffer: AudioBuffer, segments: Array<{ start: number; end: number }>): AudioBuffer[] {
-    if (!this.ctx) throw new Error('AudioEngine not initialized');
+  splitBuffer(buffer: AudioBuffer, segments: SoundSegment[]): AudioBuffer[] {
+    this.ensureInitialized();
 
-    const buffers: AudioBuffer[] = [];
+    return segments
+      .map((segment) => this.extractBufferSegment(buffer, segment))
+      .filter((buf): buf is AudioBuffer => buf !== null);
+  }
 
-    for (const segment of segments) {
-      const startSample = Math.floor(segment.start * buffer.sampleRate);
-      const endSample = Math.floor(segment.end * buffer.sampleRate);
-      const length = endSample - startSample;
+  /**
+   * Extract a segment from a buffer
+   */
+  private extractBufferSegment(buffer: AudioBuffer, segment: SoundSegment): AudioBuffer | null {
+    const startSample = Math.floor(segment.start * buffer.sampleRate);
+    const endSample = Math.floor(segment.end * buffer.sampleRate);
+    const length = endSample - startSample;
 
-      if (length > 0) {
-        const newBuffer = this.ctx.createBuffer(buffer.numberOfChannels, length, buffer.sampleRate);
+    if (length <= 0) return null;
 
-        for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
-          const sourceData = buffer.getChannelData(channel);
-          const destData = newBuffer.getChannelData(channel);
+    const newBuffer = this.ctx!.createBuffer(buffer.numberOfChannels, length, buffer.sampleRate);
 
-          for (let i = 0; i < length; i++) {
-            destData[i] = sourceData[startSample + i];
-          }
-        }
+    for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
+      const sourceData = buffer.getChannelData(channel);
+      const destData = newBuffer.getChannelData(channel);
 
-        buffers.push(newBuffer);
+      for (let i = 0; i < length; i++) {
+        destData[i] = sourceData[startSample + i];
       }
     }
 
-    return buffers;
+    return newBuffer;
   }
 }

@@ -1,13 +1,29 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AudioEngine } from '../../services/audio-engine';
-import { PresetService, Preset } from '../../services/preset';
+import { PresetService } from '../../services/preset';
+import { environment } from '../../config/environment';
+import type { Preset } from '../../models';
 
+/**
+ * Log entry for test output
+ */
 interface TestLog {
   timestamp: Date;
   level: 'info' | 'success' | 'error';
   message: string;
 }
+
+/**
+ * Test configuration constants
+ */
+const TEST_CONFIG = {
+  BASE_URL: `${environment.BACKEND_URL}/presets`,
+  MAX_SAMPLES_TO_LOAD: 8,
+  DELAY_BETWEEN_SAMPLES_MS: 300,
+  DELAY_BETWEEN_PLAYS_MS: 400,
+  RHYTHM_DELAY_MS: 250,
+} as const;
 
 /**
  * HeadlessTest - Component to test the audio engine without GUI interaction
@@ -23,9 +39,9 @@ export class HeadlessTest {
   private readonly audioEngine = inject(AudioEngine);
   private readonly presetService = inject(PresetService);
 
-  logs = signal<TestLog[]>([]);
-  isRunning = signal(false);
-  testProgress = signal(0);
+  readonly logs = signal<TestLog[]>([]);
+  readonly isRunning = signal(false);
+  readonly testProgress = signal(0);
 
   private log(message: string, level: 'info' | 'success' | 'error' = 'info'): void {
     this.logs.update((logs) => [
@@ -75,12 +91,11 @@ export class HeadlessTest {
       this.testProgress.set(30);
 
       // Step 4: Load samples into pads
-      const baseUrl = 'http://localhost:5000/presets';
-      const samplesToLoad = Math.min(preset.samples.length, 8); // Load first 8 samples
+      const samplesToLoad = Math.min(preset.samples.length, TEST_CONFIG.MAX_SAMPLES_TO_LOAD);
 
       for (let i = 0; i < samplesToLoad; i++) {
         const sample = preset.samples[i];
-        const url = `${baseUrl}/${sample.url}`;
+        const url = `${TEST_CONFIG.BASE_URL}/${sample.url}`;
 
         this.log(`  Loading sample ${i + 1}/${samplesToLoad}: ${sample.name}...`, 'info');
 
@@ -96,7 +111,7 @@ export class HeadlessTest {
           this.log(`  ✗ Failed to load "${sample.name}": ${error}`, 'error');
         }
 
-        await this.delay(300);
+        await this.delay(TEST_CONFIG.DELAY_BETWEEN_SAMPLES_MS);
       }
 
       this.testProgress.set(70);
@@ -112,7 +127,7 @@ export class HeadlessTest {
         if (pad?.loaded) {
           this.log(`  🔊 Playing pad ${i}: ${pad.name}`, 'info');
           this.audioEngine.play(i);
-          await this.delay(400);
+          await this.delay(TEST_CONFIG.DELAY_BETWEEN_PLAYS_MS);
         }
       }
 
@@ -197,7 +212,7 @@ export class HeadlessTest {
 
     this.log('🎵 Playing quick rhythm pattern...', 'info');
     const pattern = [0, 1, 0, 2, 0, 1, 3, 1]; // Simple drum pattern
-    await this.playPattern(pattern, 250);
+    await this.playPattern(pattern, TEST_CONFIG.RHYTHM_DELAY_MS);
     this.log('✓ Rhythm pattern complete', 'success');
   }
 }

@@ -1,11 +1,11 @@
 import { Component, signal, inject, OnInit, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { PresetService, Preset, Sample } from '../../services/preset';
+import { PresetService } from '../../services/preset';
+import type { Preset, Sample } from '../../models';
 
 @Component({
   selector: 'app-preset-manager',
-  standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './preset-manager.html',
   styleUrl: './preset-manager.css',
@@ -13,13 +13,13 @@ import { PresetService, Preset, Sample } from '../../services/preset';
 export class PresetManager implements OnInit {
   private readonly presetService = inject(PresetService);
 
-  // State
+  // State signals
   readonly presets = signal<Preset[]>([]);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
 
-  // Modal states
+  // Modal state signals
   readonly showRenameModal = signal(false);
   readonly showDeleteModal = signal(false);
   readonly showCreateModal = signal(false);

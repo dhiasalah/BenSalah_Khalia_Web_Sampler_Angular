@@ -4,7 +4,7 @@ import { PresetMenu } from './components/preset-menu/preset-menu';
 import { HeadlessTest } from './components/headless-test/headless-test';
 import { PadsGrid } from './components/pads-grid/pads-grid';
 import { PresetManager } from './components/preset-manager/preset-manager';
-import { Preset } from './services/preset';
+import type { Preset } from './models';
 
 @Component({
   selector: 'app-root',
@@ -20,7 +20,6 @@ export class App {
 
   onPresetSelected(preset: Preset): void {
     this.selectedPreset.set(preset);
-    console.log('Preset selected:', preset);
   }
 
   toggleHeadlessTest(): void {
@@ -32,6 +31,6 @@ export class App {
   }
 
   onLoadingComplete(): void {
-    console.log('All samples loaded!');
+    // All samples loaded - can add additional logic here if needed
   }
 }

@@ -5,52 +5,35 @@ import {
   signal,
   effect,
   output,
-  OnInit,
-  OnDestroy,
   HostListener,
   ViewChild,
   ElementRef,
-  AfterViewInit,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { AudioEngine, Pad } from '../../services/audio-engine';
-import { Preset, Sample, PresetService, SampleToSave } from '../../services/preset';
+import { AudioEngine } from '../../services/audio-engine';
+import { PresetService } from '../../services/preset';
+import { WaveformDrawer } from '../../utils/waveform-drawer';
+import { environment } from '../../config/environment';
+import type {
+  Pad,
+  Preset,
+  Sample,
+  SampleToSave,
+  PadLoadingState,
+  SoundSegment,
+} from '../../models';
+import { KEYBOARD_MAP, PRESET_CATEGORIES } from '../../models';
 
 /**
- * Loading state for each pad
+ * Grid configuration constants
  */
-interface PadLoadingState {
-  isLoading: boolean;
-  progress: number;
-  error: string | null;
-}
-
-/**
- * Keyboard mapping for pads
- */
-const KEYBOARD_MAP: { [key: string]: number } = {
-  // Bottom row (pads 0-3)
-  a: 0,
-  s: 1,
-  d: 2,
-  f: 3,
-  // Second row (pads 4-7)
-  q: 4,
-  w: 5,
-  e: 6,
-  r: 7,
-  // Third row (pads 8-11)
-  z: 8,
-  x: 9,
-  c: 10,
-  v: 11,
-  // Top row (pads 12-15)
-  t: 12,
-  y: 13,
-  u: 14,
-  i: 15,
-};
+const GRID_CONFIG = {
+  TOTAL_PADS: 16,
+  GRID_SIZE: 4,
+  ANIMATION_DURATION_MS: 150,
+  RECORDING_TIMER_INTERVAL_MS: 100,
+} as const;
 
 /**
  * PadsGrid - Visual grid of sampler pads
@@ -63,9 +46,10 @@ const KEYBOARD_MAP: { [key: string]: number } = {
   templateUrl: './pads-grid.html',
   styleUrl: './pads-grid.css',
 })
-export class PadsGrid implements OnInit, OnDestroy, AfterViewInit {
+export class PadsGrid {
   private readonly audioEngine = inject(AudioEngine);
   private readonly presetService = inject(PresetService);
+  private readonly waveformDrawer = inject(WaveformDrawer);
 
   // Canvas reference for waveform display
   @ViewChild('waveformCanvas') waveformCanvas!: ElementRef<HTMLCanvasElement>;
@@ -76,21 +60,23 @@ export class PadsGrid implements OnInit, OnDestroy, AfterViewInit {
   // Output: when all samples are loaded
   loadingComplete = output<void>();
 
-  // State
+  // Pad state
   pads = signal<Pad[]>([]);
   loadingStates = signal<PadLoadingState[]>([]);
   isLoadingPreset = signal(false);
   overallProgress = signal(0);
   activePad = signal<number | null>(null);
   pressedKeys = signal<Set<string>>(new Set());
+
+  // Selected pad state
   selectedPadIndex = signal<number | null>(null);
   selectedPadName = signal<string>('');
 
   // Trim controls state
-  trimStart = signal<number>(0); // 0-1 normalized
-  trimEnd = signal<number>(1); // 0-1 normalized
+  trimStart = signal(0); // 0-1 normalized
+  trimEnd = signal(1); // 0-1 normalized
   isDragging = signal<'start' | 'end' | null>(null);
-  audioDuration = signal<number>(0);
+  audioDuration = signal(0);
 
   // Recording state
   isRecording = signal(false);
@@ -100,7 +86,7 @@ export class PadsGrid implements OnInit, OnDestroy, AfterViewInit {
   targetPadForRecording = signal<number | null>(null);
   autoSplitEnabled = signal(true);
   silenceThreshold = signal(0.02);
-  detectedSegments = signal<Array<{ start: number; end: number }>>([]);
+  detectedSegments = signal<SoundSegment[]>([]);
   private recordingTimer: ReturnType<typeof setInterval> | null = null;
   activeRecordedPad = signal(false);
   recordedPadTrimStart = signal(0);
@@ -117,26 +103,16 @@ export class PadsGrid implements OnInit, OnDestroy, AfterViewInit {
   saveError = signal<string | null>(null);
   saveSuccess = signal(false);
 
-  // Available categories for presets
-  readonly categories = [
-    'Drumkit',
-    'Electronic',
-    'Hip-Hop',
-    'Acoustic',
-    'Piano',
-    'Percussion',
-    'FX',
-    'Other',
-  ];
+  // Available categories for presets (from shared models)
+  readonly categories = PRESET_CATEGORIES;
 
   // Base URL for audio files
-  private readonly baseUrl = 'http://localhost:5000/presets';
+  private readonly baseUrl = `${environment.BACKEND_URL}/presets`;
 
   constructor() {
-    // Initialize loading states for 16 pads
     this.initializeLoadingStates();
 
-    // Watch for preset changes
+    // Watch for preset changes and load automatically
     effect(() => {
       const currentPreset = this.preset();
       if (currentPreset) {
@@ -144,18 +120,6 @@ export class PadsGrid implements OnInit, OnDestroy, AfterViewInit {
         this.loadPreset(currentPreset);
       }
     });
-  }
-
-  ngOnInit(): void {
-    // Keyboard listeners are handled via @HostListener
-  }
-
-  ngAfterViewInit(): void {
-    // Canvas is ready
-  }
-
-  ngOnDestroy(): void {
-    // Clean up if needed
   }
 
   /**
@@ -218,11 +182,15 @@ export class PadsGrid implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
+  /**
+   * Initialize loading states for all pads
+   */
   private initializeLoadingStates(): void {
-    const states: PadLoadingState[] = [];
-    for (let i = 0; i < 16; i++) {
-      states.push({ isLoading: false, progress: 0, error: null });
-    }
+    const states = Array.from({ length: GRID_CONFIG.TOTAL_PADS }, () => ({
+      isLoading: false,
+      progress: 0,
+      error: null,
+    }));
     this.loadingStates.set(states);
   }
 
@@ -235,31 +203,26 @@ export class PadsGrid implements OnInit, OnDestroy, AfterViewInit {
     this.initializeLoadingStates();
 
     try {
-      // Initialize audio engine if needed
       if (!this.audioEngine.isInitialized()) {
         await this.audioEngine.initialize();
       }
 
-      // Clear existing pads
       this.audioEngine.clearAll();
 
       const samples = preset.samples;
-      const totalSamples = Math.min(samples.length, 16);
+      const totalSamples = Math.min(samples.length, GRID_CONFIG.TOTAL_PADS);
       let loadedCount = 0;
 
-      // Load each sample
       for (let i = 0; i < totalSamples; i++) {
         const sample = samples[i];
         const url = this.buildSampleUrl(sample.url);
 
-        // Update loading state for this pad
         this.updateLoadingState(i, { isLoading: true, progress: 0, error: null });
 
         try {
           await this.audioEngine.loadSoundFromURL(i, url, (progress) => {
             this.updateLoadingState(i, { isLoading: true, progress, error: null });
 
-            // Update overall progress
             const overall = ((loadedCount + progress / 100) / totalSamples) * 100;
             this.overallProgress.set(Math.round(overall));
           });
@@ -469,116 +432,29 @@ export class PadsGrid implements OnInit, OnDestroy, AfterViewInit {
     const pad = this.audioEngine.getPad(padIndex);
     if (!pad?.buffer) return;
 
-    const canvas = this.waveformCanvas.nativeElement;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // Set canvas size for crisp rendering
-    const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-    ctx.scale(dpr, dpr);
-
-    const width = rect.width;
-    const height = rect.height;
-    const trimStartX = this.trimStart() * width;
-    const trimEndX = this.trimEnd() * width;
-
-    // Clear canvas
-    ctx.fillStyle = '#0f0f1a';
-    ctx.fillRect(0, 0, width, height);
-
-    // Draw trimmed out regions (darker)
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-    ctx.fillRect(0, 0, trimStartX, height);
-    ctx.fillRect(trimEndX, 0, width - trimEndX, height);
-
-    // Get audio data
-    const buffer = pad.buffer;
-    const data = buffer.getChannelData(0);
-    const step = Math.ceil(data.length / width);
-    const amp = height / 2;
-
-    // Draw waveform
-    ctx.beginPath();
-    ctx.moveTo(0, amp);
-
-    for (let i = 0; i < width; i++) {
-      let min = 1.0;
-      let max = -1.0;
-
-      for (let j = 0; j < step; j++) {
-        const datum = data[i * step + j];
-        if (datum !== undefined) {
-          if (datum < min) min = datum;
-          if (datum > max) max = datum;
-        }
-      }
-
-      ctx.lineTo(i, (1 + min) * amp);
-      ctx.lineTo(i, (1 + max) * amp);
-    }
-
-    // Color based on if in trim zone
-    ctx.strokeStyle = '#22c55e';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    // Draw center line
-    ctx.beginPath();
-    ctx.moveTo(0, amp);
-    ctx.lineTo(width, amp);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-    ctx.stroke();
-
-    // Draw trim start bar
-    ctx.fillStyle = '#f59e0b';
-    ctx.fillRect(trimStartX - 3, 0, 6, height);
-
-    // Draw trim start handle
-    ctx.beginPath();
-    ctx.moveTo(trimStartX, 0);
-    ctx.lineTo(trimStartX + 10, 0);
-    ctx.lineTo(trimStartX + 10, 15);
-    ctx.lineTo(trimStartX, 25);
-    ctx.closePath();
-    ctx.fill();
-
-    // Draw trim end bar
-    ctx.fillStyle = '#ef4444';
-    ctx.fillRect(trimEndX - 3, 0, 6, height);
-
-    // Draw trim end handle
-    ctx.beginPath();
-    ctx.moveTo(trimEndX, 0);
-    ctx.lineTo(trimEndX - 10, 0);
-    ctx.lineTo(trimEndX - 10, 15);
-    ctx.lineTo(trimEndX, 25);
-    ctx.closePath();
-    ctx.fill();
+    this.waveformDrawer.drawWaveform(
+      this.waveformCanvas,
+      pad.buffer,
+      this.trimStart(),
+      this.trimEnd(),
+    );
   }
 
   /**
    * Handle mouse down on canvas for trim dragging
    */
   onCanvasMouseDown(event: MouseEvent): void {
-    const canvas = this.waveformCanvas?.nativeElement;
-    if (!canvas) return;
+    if (!this.waveformCanvas) return;
 
-    const rect = canvas.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const width = rect.width;
-    const normalizedX = x / width;
+    const normalizedX = this.waveformDrawer.getNormalizedPosition(event, this.waveformCanvas);
+    const target = this.waveformDrawer.getTrimBarTarget(
+      normalizedX,
+      this.trimStart(),
+      this.trimEnd(),
+    );
 
-    const startDist = Math.abs(normalizedX - this.trimStart());
-    const endDist = Math.abs(normalizedX - this.trimEnd());
-
-    // Check if close enough to a trim bar (within 5%)
-    if (startDist < 0.05 && startDist < endDist) {
-      this.isDragging.set('start');
-    } else if (endDist < 0.05) {
-      this.isDragging.set('end');
+    if (target) {
+      this.isDragging.set(target);
     }
   }
 
@@ -586,26 +462,24 @@ export class PadsGrid implements OnInit, OnDestroy, AfterViewInit {
    * Handle mouse move on canvas for trim dragging
    */
   onCanvasMouseMove(event: MouseEvent): void {
-    if (!this.isDragging()) return;
+    const dragging = this.isDragging();
+    if (!dragging || !this.waveformCanvas) return;
 
-    const canvas = this.waveformCanvas?.nativeElement;
-    if (!canvas) return;
+    const normalizedX = this.waveformDrawer.getNormalizedPosition(event, this.waveformCanvas);
+    const newPosition = this.waveformDrawer.calculateTrimPosition(
+      normalizedX,
+      this.trimStart(),
+      this.trimEnd(),
+      dragging,
+    );
 
-    const rect = canvas.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const normalizedX = Math.max(0, Math.min(1, x / rect.width));
-
-    if (this.isDragging() === 'start') {
-      // Don't let start go past end
-      const newStart = Math.min(normalizedX, this.trimEnd() - 0.01);
-      this.trimStart.set(Math.max(0, newStart));
-    } else if (this.isDragging() === 'end') {
-      // Don't let end go before start
-      const newEnd = Math.max(normalizedX, this.trimStart() + 0.01);
-      this.trimEnd.set(Math.min(1, newEnd));
+    if (dragging === 'start') {
+      this.trimStart.set(newPosition);
+    } else {
+      this.trimEnd.set(newPosition);
     }
 
-    // Update trim for recorded pad or regular pad
+    // Update display
     if (this.selectedPadIndex() === -1) {
       this.updateRecordedTrimValues();
       const buffer = this.recordedBuffer();
@@ -695,7 +569,7 @@ export class PadsGrid implements OnInit, OnDestroy, AfterViewInit {
       if (this.activePad() === index) {
         this.activePad.set(null);
       }
-    }, 150);
+    }, GRID_CONFIG.ANIMATION_DURATION_MS);
   }
 
   /**
@@ -708,28 +582,27 @@ export class PadsGrid implements OnInit, OnDestroy, AfterViewInit {
    *    0  1  2  3  (row 3, bottom)
    */
   getPadIndexForPosition(position: number): number {
-    const row = Math.floor(position / 4);
-    const col = position % 4;
-    // Invert row order: row 0 becomes row 3, etc.
-    const invertedRow = 3 - row;
-    return invertedRow * 4 + col;
+    const row = Math.floor(position / GRID_CONFIG.GRID_SIZE);
+    const col = position % GRID_CONFIG.GRID_SIZE;
+    const invertedRow = GRID_CONFIG.GRID_SIZE - 1 - row;
+    return invertedRow * GRID_CONFIG.GRID_SIZE + col;
   }
 
   /**
    * Get position in grid for a given pad index
    */
   getPositionForPadIndex(padIndex: number): number {
-    const row = Math.floor(padIndex / 4);
-    const col = padIndex % 4;
-    const invertedRow = 3 - row;
-    return invertedRow * 4 + col;
+    const row = Math.floor(padIndex / GRID_CONFIG.GRID_SIZE);
+    const col = padIndex % GRID_CONFIG.GRID_SIZE;
+    const invertedRow = GRID_CONFIG.GRID_SIZE - 1 - row;
+    return invertedRow * GRID_CONFIG.GRID_SIZE + col;
   }
 
   /**
    * Get array of grid positions (0-15)
    */
   getGridPositions(): number[] {
-    return Array.from({ length: 16 }, (_, i) => i);
+    return Array.from({ length: GRID_CONFIG.TOTAL_PADS }, (_, i) => i);
   }
 
   /**
@@ -737,8 +610,7 @@ export class PadsGrid implements OnInit, OnDestroy, AfterViewInit {
    */
   getPadForPosition(position: number): Pad | null {
     const padIndex = this.getPadIndexForPosition(position);
-    const allPads = this.pads();
-    return allPads[padIndex] || null;
+    return this.pads()[padIndex] ?? null;
   }
 
   /**
@@ -746,7 +618,7 @@ export class PadsGrid implements OnInit, OnDestroy, AfterViewInit {
    */
   getLoadingStateForPosition(position: number): PadLoadingState {
     const padIndex = this.getPadIndexForPosition(position);
-    return this.loadingStates()[padIndex] || { isLoading: false, progress: 0, error: null };
+    return this.loadingStates()[padIndex] ?? { isLoading: false, progress: 0, error: null };
   }
 
   /**
@@ -822,7 +694,7 @@ export class PadsGrid implements OnInit, OnDestroy, AfterViewInit {
       // Start timer
       this.recordingTimer = setInterval(() => {
         this.recordingTime.update((t) => t + 0.1);
-      }, 100);
+      }, GRID_CONFIG.RECORDING_TIMER_INTERVAL_MS);
     } catch (error) {
       console.error('Failed to start recording:', error);
       alert('Could not access microphone. Please check permissions.');
@@ -1048,92 +920,17 @@ export class PadsGrid implements OnInit, OnDestroy, AfterViewInit {
   }
 
   /**
-   * Draw recorded waveform on canvas
+   * Draw recorded waveform on canvas (uses red color scheme)
    */
   private drawRecordedWaveform(buffer: AudioBuffer): void {
     if (!this.waveformCanvas) return;
 
-    const canvas = this.waveformCanvas.nativeElement;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // Set canvas size for crisp rendering
-    const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-    ctx.scale(dpr, dpr);
-
-    const width = rect.width;
-    const height = rect.height;
-    const trimStartX = this.trimStart() * width;
-    const trimEndX = this.trimEnd() * width;
-
-    // Clear canvas
-    ctx.fillStyle = '#0f0f1a';
-    ctx.fillRect(0, 0, width, height);
-
-    // Draw trimmed out regions
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-    ctx.fillRect(0, 0, trimStartX, height);
-    ctx.fillRect(trimEndX, 0, width - trimEndX, height);
-
-    // Get audio data
-    const data = buffer.getChannelData(0);
-    const step = Math.ceil(data.length / width);
-    const amp = height / 2;
-
-    // Draw waveform
-    ctx.beginPath();
-    ctx.moveTo(0, amp);
-
-    for (let i = 0; i < width; i++) {
-      let min = 1.0;
-      let max = -1.0;
-
-      for (let j = 0; j < step; j++) {
-        const datum = data[i * step + j];
-        if (datum !== undefined) {
-          if (datum < min) min = datum;
-          if (datum > max) max = datum;
-        }
-      }
-
-      ctx.lineTo(i, (1 + min) * amp);
-      ctx.lineTo(i, (1 + max) * amp);
-    }
-
-    ctx.strokeStyle = '#dc2626';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    // Draw center line
-    ctx.beginPath();
-    ctx.moveTo(0, amp);
-    ctx.lineTo(width, amp);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-    ctx.stroke();
-
-    // Draw trim bars (orange start, red end)
-    ctx.fillStyle = '#f59e0b';
-    ctx.fillRect(trimStartX - 3, 0, 6, height);
-    ctx.beginPath();
-    ctx.moveTo(trimStartX, 0);
-    ctx.lineTo(trimStartX + 10, 0);
-    ctx.lineTo(trimStartX + 10, 15);
-    ctx.lineTo(trimStartX, 25);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.fillStyle = '#ef4444';
-    ctx.fillRect(trimEndX - 3, 0, 6, height);
-    ctx.beginPath();
-    ctx.moveTo(trimEndX, 0);
-    ctx.lineTo(trimEndX - 10, 0);
-    ctx.lineTo(trimEndX - 10, 15);
-    ctx.lineTo(trimEndX, 25);
-    ctx.closePath();
-    ctx.fill();
+    this.waveformDrawer.drawRecordedWaveform(
+      this.waveformCanvas,
+      buffer,
+      this.trimStart(),
+      this.trimEnd(),
+    );
   }
 
   /**
