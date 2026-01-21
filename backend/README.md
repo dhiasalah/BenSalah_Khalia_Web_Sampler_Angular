@@ -30,6 +30,27 @@ cd backend
 npm install
 ```
 
+### Environment Configuration
+
+Create a `.env` file in the `backend` folder with the following variables:
+
+```env
+# MongoDB Connection
+MONGODB_URI=your_mongodb_connection_string
+
+# Server Configuration
+PORT=5000
+```
+
+**Required modifications:**
+
+- **`MONGODB_URI`**: Replace `your_mongodb_connection_string` with your actual MongoDB connection string
+  - For MongoDB Atlas: `mongodb+srv://username:password@cluster.mongodb.net/database_name`
+  - For local MongoDB: `mongodb://localhost:27017/database_name`
+- **`PORT`**: Port number for the server (default: 5000, modify if needed)
+
+**Note:** The `.env` file is not tracked by git for security reasons.
+
 ### Running the Backend
 
 #### For Local Development
