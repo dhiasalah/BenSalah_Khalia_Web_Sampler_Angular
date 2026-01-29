@@ -7,7 +7,7 @@
         class="record-toggle-btn" 
         [class.active]="showRecordingPanel()"
         (click)="toggleRecordingPanel()">
-        🎤 Record from Microphone
+        Record from Microphone
       </button>
     </div>
 
@@ -22,7 +22,7 @@
       <button 
         class="import-toggle-btn"
         (click)="fileInput.click()">
-        📁 Import Audio Files
+        Import Audio Files
       </button>
     </div>
   </div>
@@ -31,8 +31,8 @@
   @if (showRecordingPanel()) {
     <div class="recording-panel">
       <div class="recording-header">
-        <h3>🎙️ Microphone Recording</h3>
-        <button class="close-btn" (click)="toggleRecordingPanel()">✕</button>
+        <h3>Microphone Recording</h3>
+        <button class="close-btn" (click)="toggleRecordingPanel()">×</button>
       </div>
 
       <div class="recording-content">
@@ -64,7 +64,7 @@
           <!-- Recorded Audio Options -->
           <div class="recorded-options">
             <div class="recorded-info">
-              <span>✅ Recorded {{ recordingTime().toFixed(1) }}s of audio</span>
+              <span>Recorded {{ recordingTime().toFixed(1) }}s of audio</span>
               <button class="preview-btn" (click)="previewRecording()">▶ Preview</button>
             </div>
 
@@ -82,26 +82,26 @@
             @if (autoSplitEnabled()) {
               @if (detectedSegments().length > 0) {
                 <div class="segments-info">
-                  <span>🔊 Detected {{ detectedSegments().length }} sound segment(s)</span>
+                  <span>Detected {{ detectedSegments().length }} sound segment(s)</span>
                 </div>
               } @else {
                 <div class="segments-info warning">
-                  <span>⚠️ No segments detected.</span>
+                  <span>Warning: No segments detected.</span>
                 </div>
               }
             }
 
             <!-- Keep Recording Info -->
             <div class="keep-recording-info">
-              <p>✅ Your recording is ready! It will appear as a dedicated pad on the right side of the grid.</p>
+              <p>Your recording is ready! It will appear as a dedicated pad on the right side of the grid.</p>
               @if (autoSplitEnabled() && detectedSegments().length > 1) {
-                <p>🔊 Detected {{ detectedSegments().length }} sound segments</p>
+                <p>Detected {{ detectedSegments().length }} sound segments</p>
               }
             </div>
 
             <!-- Re-record button -->
             <button class="rerecord-btn" (click)="recordedBuffer.set(null); recordingTime.set(0)">
-              🔄 Record Again
+              Record Again
             </button>
           </div>
         }
@@ -183,11 +183,11 @@
             </div>
           } @else if (loadingState.error) {
             <!-- Error state -->
-            <span class="pad-error">⚠️</span>
+            <span class="pad-error">!</span>
           } @else {
             <!-- Empty pad with import hint -->
             <div class="pad-empty-content">
-              <span class="pad-empty-icon">📁</span>
+              <span class="pad-empty-icon">+</span>
               <span class="pad-empty-text">Click to import</span>
             </div>
           }
@@ -200,8 +200,8 @@
   @if (recordedBuffer()) {
     <div class="recorded-pad-container">
       <div class="recorded-pad-header">
-        <span>🎙️ Recorded Sound</span>
-        <button class="delete-recording-btn" (click)="deleteRecording()">🗑️</button>
+        <span>Recorded Sound</span>
+        <button class="delete-recording-btn" (click)="deleteRecording()">Delete</button>
       </div>
       <div 
         class="pad recorded-pad"
@@ -219,7 +219,7 @@
         </div>
       </div>
       <button class="view-waveform-btn" (click)="displayRecordedWaveform()">
-        📊 View & Trim Waveform
+        View & Trim Waveform
       </button>
     </div>
   }
@@ -239,7 +239,7 @@
       <span class="legend-icon empty"></span>
       <span>Empty</span>
     </div>
-    <p class="legend-tip">💡 Click pads or press keyboard keys to play sounds</p>
+    <p class="legend-tip">Tip: Click pads or press keyboard keys to play sounds</p>
   </div>
 
   <!-- Save Preset Button -->
@@ -248,7 +248,7 @@
       class="save-toggle-btn" 
       [class.active]="showSavePanel()"
       (click)="toggleSavePanel()">
-      💾 Save as New Preset
+      Save as New Preset
     </button>
     @if (getLoadedSamplesCount() > 0) {
       <span class="samples-count">{{ getLoadedSamplesCount() }} sample(s) loaded</span>
@@ -259,8 +259,8 @@
   @if (showSavePanel()) {
     <div class="save-panel">
       <div class="save-header">
-        <h3>💾 Save New Preset</h3>
-        <button class="close-btn" (click)="toggleSavePanel()">✕</button>
+        <h3>Save New Preset</h3>
+        <button class="close-btn" (click)="toggleSavePanel()">×</button>
       </div>
 
       <div class="save-content">
@@ -292,7 +292,7 @@
 
         <!-- Samples Info -->
         <div class="save-info">
-          <span class="info-icon">📦</span>
+          <span class="info-icon">i</span>
           <span>{{ getLoadedSamplesCount() }} sample(s) will be saved</span>
         </div>
 
@@ -321,7 +321,7 @@
             <span class="saving-spinner"></span>
             Saving...
           } @else {
-            💾 Save Preset
+            Save Preset
           }
         </button>
       </div>
@@ -333,14 +333,14 @@
     <div class="modal-overlay" (click)="cancelImport()">
       <div class="import-dialog" (click)="$event.stopPropagation()">
         <div class="import-header">
-          <h3>📁 Import Audio File</h3>
-          <button class="close-btn" (click)="cancelImport()" [disabled]="isUploading()">✕</button>
+          <h3>Import Audio File</h3>
+          <button class="close-btn" (click)="cancelImport()" [disabled]="isUploading()">×</button>
         </div>
 
         <div class="import-content">
           <!-- File Info -->
           <div class="import-file-info">
-            <span class="file-icon">🎵</span>
+            <span class="file-icon">♪</span>
             <span class="file-name">{{ pendingImportFile()?.name }}</span>
           </div>
 
@@ -360,14 +360,14 @@
 
           <!-- Target Pad Info -->
           <div class="import-target">
-            <span class="target-icon">🎹</span>
+            <span class="target-icon">#</span>
             <span>Will be loaded into Pad {{ (targetPadIndex() ?? 0) + 1 }}</span>
           </div>
 
           <!-- Error Message -->
           @if (uploadError()) {
             <div class="import-error">
-              <span class="error-icon">⚠️</span>
+              <span class="error-icon">!</span>
               <span>{{ uploadError() }}</span>
             </div>
           }

@@ -72,7 +72,7 @@
     <div class="modal-overlay" (click)="closeRenameModal()">
       <div class="modal" (click)="$event.stopPropagation()">
         <div class="modal-header">
-          <h3>✏️ Rename Preset</h3>
+          <h3>Rename Preset</h3>
           <button class="close-btn" (click)="closeRenameModal()">×</button>
         </div>
         <div class="modal-body">
@@ -102,7 +102,7 @@
     <div class="modal-overlay" (click)="closeDeleteModal()">
       <div class="modal" (click)="$event.stopPropagation()">
         <div class="modal-header">
-          <h3>🗑️ Delete Preset</h3>
+          <h3>Delete Preset</h3>
           <button class="close-btn" (click)="closeDeleteModal()">×</button>
         </div>
         <div class="modal-body">
@@ -122,7 +122,7 @@
     <div class="modal-overlay" (click)="closeCreateModal()">
       <div class="modal modal-large" (click)="$event.stopPropagation()">
         <div class="modal-header">
-          <h3>➕ Create New Preset</h3>
+          <h3>Create New Preset</h3>
           <button class="close-btn" (click)="closeCreateModal()">×</button>
         </div>
         <div class="modal-body">
@@ -220,7 +220,7 @@
                 <h4>Files to upload ({{ uploadFiles().length }}):</h4>
                 @for (file of uploadFiles(); track file.name; let i = $index) {
                   <div class="sample-item">
-                    <span class="sample-name">🎵 {{ file.name }}</span>
+                    <span class="sample-name">{{ file.name }}</span>
                     <span class="sample-size">{{ (file.size / 1024).toFixed(1) }} KB</span>
                     <button class="btn-remove" (click)="removeFile(i)">×</button>
                   </div>

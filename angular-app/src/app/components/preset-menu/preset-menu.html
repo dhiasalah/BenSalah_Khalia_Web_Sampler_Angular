@@ -6,10 +6,10 @@
         class="toggle-btn" 
         (click)="toggleCategoryView()"
         [title]="showCategories() ? 'Show flat list' : 'Show categories'">
-        {{ showCategories() ? '📁' : '📋' }}
+        {{ showCategories() ? 'Folders' : 'List' }}
       </button>
       <button class="refresh-btn" (click)="refresh()" title="Refresh presets">
-        🔄
+        Refresh
       </button>
     </div>
   </div>

@@ -1,6 +1,6 @@
 <div class="headless-test">
   <div class="test-header">
-    <h2>🤖 Headless Mode Test</h2>
+    <h2>Headless Mode Test</h2>
     <p class="test-description">
       This test demonstrates the audio engine working <strong>independently from the GUI</strong>.
       The engine loads presets, manages samples, and plays audio completely programmatically.
@@ -19,14 +19,14 @@
       class="btn btn-secondary"
       (click)="quickRhythmTest()"
       [disabled]="isRunning()">
-      🎵 Quick Rhythm Test
+      Quick Rhythm Test
     </button>
 
     <button 
       class="btn btn-clear"
       (click)="clearLogs()"
       [disabled]="isRunning()">
-      🗑️ Clear Logs
+      Clear Logs
     </button>
   </div>
 
@@ -44,7 +44,7 @@
 
   <div class="test-logs">
     <div class="logs-header">
-      <h3>📝 Test Logs</h3>
+      <h3>Test Logs</h3>
       <span class="log-count">{{ logs().length }} entries</span>
     </div>
     

@@ -64,24 +64,24 @@ export class HeadlessTest {
     this.testProgress.set(0);
 
     try {
-      this.log('🎯 Starting headless audio engine test...', 'info');
+      this.log('Starting headless audio engine test...', 'info');
 
       // Step 1: Initialize engine
       this.log('Step 1: Initializing audio engine...', 'info');
       await this.audioEngine.initialize();
       this.testProgress.set(10);
-      this.log('✓ Audio engine initialized', 'success');
+      this.log('Audio engine initialized', 'success');
       await this.delay(500);
 
       // Step 2: Fetch presets from API
       this.log('Step 2: Fetching presets from backend...', 'info');
       const presets = await this.fetchPresets();
       this.testProgress.set(20);
-      this.log(`✓ Found ${presets.length} presets`, 'success');
+      this.log(`Found ${presets.length} presets`, 'success');
       await this.delay(500);
 
       if (presets.length === 0) {
-        this.log('⚠ No presets available. Make sure backend is running.', 'error');
+        this.log('No presets available. Make sure backend is running.', 'error');
         return;
       }
 
@@ -106,16 +106,16 @@ export class HeadlessTest {
             this.testProgress.set(Math.round(stepProgress));
           });
 
-          this.log(`  ✓ Loaded "${sample.name}" into pad ${i}`, 'success');
+          this.log(`  Loaded "${sample.name}" into pad ${i}`, 'success');
         } catch (error) {
-          this.log(`  ✗ Failed to load "${sample.name}": ${error}`, 'error');
+          this.log(`  Failed to load "${sample.name}": ${error}`, 'error');
         }
 
         await this.delay(TEST_CONFIG.DELAY_BETWEEN_SAMPLES_MS);
       }
 
       this.testProgress.set(70);
-      this.log('✓ All samples loaded', 'success');
+      this.log('All samples loaded', 'success');
       await this.delay(1000);
 
       // Step 5: Play samples in sequence (automated)
@@ -125,7 +125,7 @@ export class HeadlessTest {
       for (let i = 0; i < samplesToLoad; i++) {
         const pad = this.audioEngine.getPad(i);
         if (pad?.loaded) {
-          this.log(`  🔊 Playing pad ${i}: ${pad.name}`, 'info');
+          this.log(`  Playing pad ${i}: ${pad.name}`, 'info');
           this.audioEngine.play(i);
           await this.delay(TEST_CONFIG.DELAY_BETWEEN_PLAYS_MS);
         }
@@ -141,17 +141,17 @@ export class HeadlessTest {
         const halfDuration = pad0.buffer.duration / 2;
         this.audioEngine.setTrimPoints(0, 0, halfDuration);
         this.log(`  Set trim: 0s to ${halfDuration.toFixed(2)}s`, 'info');
-        this.log('  🔊 Playing trimmed sample...', 'info');
+        this.log('  Playing trimmed sample...', 'info');
         this.audioEngine.play(0);
         await this.delay(1000);
-        this.log('  ✓ Trim test complete', 'success');
+        this.log('  Trim test complete', 'success');
       }
 
       this.testProgress.set(100);
-      this.log('🎉 Headless test completed successfully!', 'success');
-      this.log(`📊 Tested ${samplesToLoad} pads without any GUI interaction`, 'info');
+      this.log('Headless test completed successfully!', 'success');
+      this.log(`Tested ${samplesToLoad} pads without any GUI interaction`, 'info');
     } catch (error) {
-      this.log(`❌ Test failed: ${error}`, 'error');
+      this.log(`Test failed: ${error}`, 'error');
       console.error('Headless test error:', error);
     } finally {
       this.isRunning.set(false);
@@ -167,7 +167,7 @@ export class HeadlessTest {
     for (const padIndex of pattern) {
       const pad = this.audioEngine.getPad(padIndex);
       if (pad?.loaded) {
-        this.log(`🔊 Playing pad ${padIndex}`, 'info');
+        this.log(`Playing pad ${padIndex}`, 'info');
         this.audioEngine.play(padIndex);
         await this.delay(delayMs);
       }
@@ -206,13 +206,13 @@ export class HeadlessTest {
    */
   async quickRhythmTest(): Promise<void> {
     if (!this.audioEngine.isInitialized()) {
-      this.log('❌ Audio engine not initialized. Run full test first.', 'error');
+      this.log('Audio engine not initialized. Run full test first.', 'error');
       return;
     }
 
-    this.log('🎵 Playing quick rhythm pattern...', 'info');
+    this.log('Playing quick rhythm pattern...', 'info');
     const pattern = [0, 1, 0, 2, 0, 1, 3, 1]; // Simple drum pattern
     await this.playPattern(pattern, TEST_CONFIG.RHYTHM_DELAY_MS);
-    this.log('✓ Rhythm pattern complete', 'success');
+    this.log('Rhythm pattern complete', 'success');
   }
 }
