@@ -405,7 +405,6 @@ export class PadsGrid {
         ? uploadResponse.file.url
         : `${environment.BACKEND_URL}${uploadResponse.file.url}`;
 
-
       // Now load the audio into the pad locally
       await this.loadAudioBufferToPad(file, padIndex, customName);
 
@@ -490,7 +489,6 @@ export class PadsGrid {
 
     // Update pads signal
     this.updatePadsFromEngine();
-
   }
 
   /**
@@ -1259,7 +1257,6 @@ export class PadsGrid {
 
         // Update pads signal
         this.updatePadsFromEngine();
-
       } catch (error) {
         console.error(`Error importing ${file.name}:`, error);
         this.updateLoadingState(padIndex, {
@@ -1273,7 +1270,6 @@ export class PadsGrid {
     // Upload files to MongoDB storage and update preset
     if (presetName && filesToLoad.length > 0) {
       try {
-
         // Get current preset
         const currentPreset = await this.presetService.getPreset(presetName).toPromise();
         if (!currentPreset) {
@@ -1292,7 +1288,6 @@ export class PadsGrid {
           const file = filesToLoad[i];
           const padIndex = availablePadIndices[i];
           const name = file.name.replace(/\.[^/.]+$/, ''); // Remove extension
-
 
           const uploadResponse = await this.presetService
             .uploadAudioToDrive(file, name)
@@ -1366,7 +1361,6 @@ export class PadsGrid {
           samples: updatedSamples,
         })
         .toPromise();
-
     } catch (error) {
       console.error('Error updating preset:', error);
       throw error;
